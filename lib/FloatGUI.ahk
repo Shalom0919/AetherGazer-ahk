@@ -53,7 +53,6 @@ ShowFloatGUI()
 
 ; 启动选中的战斗脚本
 FloatGUI_StartScript:
-{
 	Gui, FloatGUI:Submit, NoHide
 	
 	if (FloatGUI_ScriptRunning)
@@ -111,12 +110,10 @@ FloatGUI_StartScript:
 	
 	FloatGUI_ScriptRunning := true
 	GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：%FloatGUI_SelectedScript% 脚本运行中
-}
 return
 
 ; 停止当前运行的脚本
 FloatGUI_StopScript:
-{
 	if (!FloatGUI_ScriptRunning and FloatGUI_SelectedScript = "")
 	{
 		GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：没有运行中的脚本
@@ -127,39 +124,30 @@ FloatGUI_StopScript:
 	FloatGUI_ScriptRunning := false
 	FloatGUI_SelectedScript := ""
 	GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：脚本已停止
-}
 return
 
 ; 启动多维变量模式
 FloatGUI_StartDimension:
-{
 	GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：多维变量模式启动中...
 	gosub, Dimension
 	GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：多维变量模式运行中
-}
 return
 
 ; 打开设置界面
 FloatGUI_OpenSettings:
-{
 	ShowSettingsGUI()
-}
 return
 
 ; 退出程序
 FloatGUI_Exit:
-{
 	ExitApp
-}
 return
 
 ; 窗口关闭事件
-FloatGUI:GuiClose:
-FloatGUI:GuiEscape:
-{
+FloatGUIGuiClose:
+FloatGUIGuiEscape:
 	; 最小化到托盘而不是关闭
 	Gui, FloatGUI:Hide
-}
 return
 
 ; 显示浮动面板的函数
