@@ -1,63 +1,38 @@
 ﻿; ----------------------------------------------------------------------------
 ; 梵天自动战斗脚本
+; Fantian Auto Combat Script
 ; ----------------------------------------------------------------------------
 
-global 11_Enable := false
-
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
 Fantian:
 {
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	if IsGameActive()
 	{
 		11_Enable := !11_Enable
 		if (11_Enable = false)
 		{
 			SetTimer, Press11, Off
-			ToolTip
+			ClearStatus()
 		}
 		else
 		{
 			Sleep 100
 			SetTimer, Press11, 10
-			if (ShowTooltip)
-				ToolTip, 梵天：启动, %TooltipX%, %TooltipY%
+			ShowStatus("梵天：启动")
 		}
 	}
 }
 
 Press11:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	if CheckAndStopCombat(11, "Press11")
+		return
+	
+	; 检测是否需要闪避 (Check if dodge is needed)
+	if (GetColor(1218, 681) == "0xFFFFFF" and GetColor(910, 683) != "0xFFFFFF")
 	{
-		if (GetColor(1218, 681) == "0xFFFFFF" and GetColor(910, 683) != "0xFFFFFF")
-		{
-			Send, {%DodgeKey% Down}
-			Sleep, 500
-			Send, {%DodgeKey% Up}
-		}
-		Send, {%Skill3Key%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill1Key%}
-		Sleep 5
-		Send, {%UltimateKey%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill2Key%}
-		Sleep 5
-		Send, {%Teammate2Key%}
-		Sleep 5
-		Send, {%Skill1Key%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill2Key%}
-		Sleep 5
+		SendKeyHold("DodgeKey", 500)
 	}
-	else
-	{
-		SetTimer, Press11, Off
-		ToolTip
-		11_Enable := false
-	}
+	
+	; 快速连招 (Quick combo)
+	SendCombo(["Skill3Key", "AttackKey", "Skill1Key", "UltimateKey", "AttackKey", "Skill2Key", "Teammate2Key", "Skill1Key", "AttackKey", "Skill2Key"], 5)
 return
