@@ -95,6 +95,7 @@ Menu, Tray, Tip, 深空之眼自动脚本
 SysGet, VirtualWidth, 16
 SysGet, VirtualHeight, 17
 CoordMode, ToolTip, Screen
+return
 
 ; ============================================================================
 ; 停止脚本函数
