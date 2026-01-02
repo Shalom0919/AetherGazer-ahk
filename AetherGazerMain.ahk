@@ -1,667 +1,207 @@
-﻿; ============================================================================
-; 脚本名称：深空之眼
-; 版本：3.1（整合版）
-; 作者：qstdnx
-; 联系方式：https://github.com/qstdnx/AetherGazer-ahk/issues
-; Fork：由 Shalom0919 进行模块化和整合
-; 说明：这是将所有模块整合到一个文件的版本，无需依赖 lib 目录
-; ============================================================================
-
-; ============================================================================
-; 第一部分：脚本基础设置
-; ============================================================================
-#Persistent             ; 让脚本持久运行
-#SingleInstance, Force  ; 运行替换旧实例
-ListLines, Off          ; 不显示最近执行的脚本行
-SetBatchLines, -1       ; 脚本全速执行(默认10ms)
-CoordMode, Menu, Window ; 坐标相对活动窗口
-
-; ============================================================================
-; 获取管理员权限
-; ============================================================================
-if !A_IsAdmin
+﻿; ----------------------------------------------------------------------------
+; Script Name: 深空之眼
+; Version: 3.1
+; Author: qstdnx
+; Contact: https://github.com/qstdnx/AetherGazer-ahk/issues
+; ----------------------------------------------------------------------------
+#Persistent             ;~让脚本持久运行
+#SingleInstance,Force   ;~运行替换旧实例
+ListLines,Off           ;~不显示最近执行的脚本行
+SetBatchLines,-1        ;~脚本全速执行(默认10ms)
+CoordMode,Menu,Window   ;~坐标相对活动窗口
+;------------------------------------------------获取管理员权限 ↓↓↓
+if !A_IsAdmin  ; 如果不是管理员权限
 {
-try
-{
-if A_IsCompiled
-Run *RunAs "%A_ScriptFullPath%" %1% %2% %3% %4% %5% %6% %7% %8% %9%
-else
-Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%" %1% %2% %3% %4% %5% %6% %7% %8% %9%
-ExitApp
-}
-catch
-{
-MsgBox "管理员权限请求被拒绝，深空之眼需要使用管理员权限运行脚本"
-ExitApp
-}
+	try  ; 尝试以管理员身份重新启动脚本
+	{
+		if A_IsCompiled  ; 如果是编译后的 .exe
+			Run *RunAs "%A_ScriptFullPath%" %1% %2% %3% %4% %5% %6% %7% %8% %9%
+		else  ; 如果是 .ahk 脚本
+			Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%" %1% %2% %3% %4% %5% %6% %7% %8% %9%
+		ExitApp  ; 退出当前非管理员实例
+	}
+	catch  ; 如果用户拒绝了 UAC 弹窗
+	{
+		MsgBox "管理员权限请求被拒绝，3.5版本后深空之眼需要使用管理员权限运行脚本"
+		ExitApp
+	}
 }
 
-; ============================================================================
-; 第二部分：全局变量初始化
-; ============================================================================
+;------------------------------------------------设置 ↓↓↓
+; 初始化快捷键
+global UPKey := "w"
+global DOWNKey := "s"
+global LEFTKey := "a"
+global RIGHTKey := "d"
+global AttackKey := "j"
+global Skill1Key := "u"
+global Skill2Key := "i"
+global Skill3Key := "o"
+global DodgeKey := "Space"
+global UltimateKey := "r"
+global Teammate1Key := "1"
+global Teammate2Key := "2"
+global JinwuKey := "Numpad1"
+global DimensionKey := "Numpad2"
+global LingguangKey := "Numpad3"
+global TuoteKey := "Numpad4"
+global NameiKey := "Numpad5"
+global WeierKey := "Numpad6"
+global KaorouKey := "Numpad7"
+global LiandianKey := "Numpad9"
+global FantianKey := "^Numpad1"
+global ShikoudiKey := "^Numpad2"
+global FengqianfangtiangouKey := "^Numpad3"
+global YalishaKey := "^Numpad4"
+global StopscriptKey := "Numpad0"
 global ScriptDir := A_ScriptDir
-global ConfigFilePath := A_ScriptDir . "\settings.ini"
+IniFilePath := ScriptDir . "\settings.ini"
 
-; 统计功能全局变量
-global TotalRuns := 0
-global TotalTime := 0
-global LastRunTime := ""
-global SessionRuns := 0
-global SessionStartTime := A_TickCount
+; 定义所有需要检查的键值对
+KeyMappings := { "UpKey": UPKey
+  , "DownKey": DOWNKey
+	, "LeftKey": LEFTKey
+	, "RightKey": RIGHTKey
+  , "AttackKey": AttackKey
+	, "Skill1Key": Skill1Key
+	, "Skill2Key": Skill2Key
+	, "Skill3Key": Skill3Key
+	, "DodgeKey": DodgeKey
+	, "UltimateKey": UltimateKey
+	, "Teammate1Key": Teammate1Key
+	, "Teammate2Key": Teammate2Key
+	, "JinwuKey": JinwuKey
+	, "DimensionKey": DimensionKey
+	, "LingguangKey": LingguangKey
+	, "TuoteKey": TuoteKey
+	, "NameiKey": NameiKey
+	, "WeierKey": WeierKey
+	, "KaorouKey": KaorouKey
+	, "LiandianKey": LiandianKey
+	, "FantianKey": FantianKey
+	, "ShikoudiKey": ShikoudiKey
+	, "FengqianfangtiangouKey": FengqianfangtiangouKey
+  , "YalishaKey": YalishaKey
+	, "StopscriptKey": StopscriptKey }
 
-; 浮动控制面板全局变量
-global FloatGUI_ScriptRunning := false
-global FloatGUI_SelectedScript := ""
-
-; 战斗脚本启用标志
-global 1_Enable := false   ; 金乌
-global 2_Enable := false   ; 多维变量
-global 3_Enable := false   ; 陵光
-global 4_Enable := false   ; 托特
-global 5_Enable := false   ; 娜美
-global 6_Enable := false   ; 薇儿
-global 7_Enable := false   ; 烤肉
-global 9_Enable := false   ; 连点器
-global 11_Enable := false  ; 梵天
-global 12_Enable := false  ; 诗寇蒂
-global 13_Enable := false  ; 樱切
-global 14_Enable := false  ; 亚莉莎
-
-; 连点器全局变量
-global Inputkey := ""
-global WhichButton := ""
-global interval := 50
-
-; ============================================================================
-; 第三部分：通用工具函数（Utils）
-; ============================================================================
-
-; 获取指定坐标的颜色
-GetColor(x, y)
-{
-PixelGetColor, color, x, y, RGB
-StringRight color, color, 10
-return color
+; 检查INI文件是否存在，不存在则创建
+if !FileExist(IniFilePath) {
+	; 创建新的INI文件并写入所有默认值
+	for key, value in KeyMappings {
+		IniWrite, %value%, %IniFilePath%, Hotkeys, %key%
 }
-
-; 判断两个颜色值是否在容差范围内
-IsColorClose(color1, color2, tolerance)
-{
-color1 := "0x" SubStr(color1, 3)
-color2 := "0x" SubStr(color2, 3)
-
-r1 := (color1 >> 16) & 0xFF
-g1 := (color1 >> 8) & 0xFF
-b1 := color1 & 0xFF
-
-r2 := (color2 >> 16) & 0xFF
-g2 := (color2 >> 8) & 0xFF
-b2 := color2 & 0xFF
-
-if (Abs(r1 - r2) <= tolerance && Abs(g1 - g2) <= tolerance && Abs(b1 - b2) <= tolerance)
-{
-return true
-}
-return false
-}
-
-; ============================================================================
-; 第四部分：配置管理模块（Config）
-; ============================================================================
-
-; 默认配置值
-InitDefaultConfig()
-{
-global
-; 游戏按键默认值
-DefaultKeys := {}
-DefaultKeys["UpKey"] := "w"
-DefaultKeys["DownKey"] := "s"
-DefaultKeys["LeftKey"] := "a"
-DefaultKeys["RightKey"] := "d"
-DefaultKeys["AttackKey"] := "j"
-DefaultKeys["Skill1Key"] := "u"
-DefaultKeys["Skill2Key"] := "i"
-DefaultKeys["Skill3Key"] := "o"
-DefaultKeys["DodgeKey"] := "Space"
-DefaultKeys["UltimateKey"] := "r"
-DefaultKeys["Teammate1Key"] := "1"
-DefaultKeys["Teammate2Key"] := "2"
-
-; 脚本快捷键默认值
-DefaultKeys["JinwuKey"] := "Numpad1"
-DefaultKeys["DimensionKey"] := "Numpad2"
-DefaultKeys["LingguangKey"] := "Numpad3"
-DefaultKeys["TuoteKey"] := "Numpad4"
-DefaultKeys["NameiKey"] := "Numpad5"
-DefaultKeys["WeierKey"] := "Numpad6"
-DefaultKeys["KaorouKey"] := "Numpad7"
-DefaultKeys["LiandianKey"] := "Numpad9"
-DefaultKeys["FantianKey"] := "^Numpad1"
-DefaultKeys["ShikoudiKey"] := "^Numpad2"
-DefaultKeys["FengqianfangtiangouKey"] := "^Numpad3"
-DefaultKeys["YalishaKey"] := "^Numpad4"
-DefaultKeys["StopscriptKey"] := "Numpad0"
-
-return DefaultKeys
-}
-
-; 加载配置
-LoadConfig()
-{
-global
-DefaultKeys := InitDefaultConfig()
-
-; 检查 INI 文件是否存在
-if !FileExist(ConfigFilePath)
-{
-CreateDefaultConfig()
-}
-
-; 加载所有配置
-for key, defaultValue in DefaultKeys
-{
-IniRead, ReadValue, %ConfigFilePath%, Hotkeys, %key%
-if (ReadValue = "ERROR")
-{
-IniWrite, %defaultValue%, %ConfigFilePath%, Hotkeys, %key%
-ReadValue := defaultValue
-}
-%key% := ReadValue
-}
-
-; 加载通用设置
-IniRead, Resolution, %ConfigFilePath%, General, Resolution, 1280x720
-IniRead, ShowTooltip, %ConfigFilePath%, General, ShowTooltip, 1
-IniRead, TooltipX, %ConfigFilePath%, General, TooltipX, 74
-IniRead, TooltipY, %ConfigFilePath%, General, TooltipY, 1021
-IniRead, ScriptDelay, %ConfigFilePath%, General, ScriptDelay, 10
-IniRead, MinimizeToTray, %ConfigFilePath%, General, MinimizeToTray, 0
-IniRead, AutoStart, %ConfigFilePath%, General, AutoStart, 0
-
-; 加载多维变量设置
-IniRead, DimensionDifficulty, %ConfigFilePath%, Dimension, Difficulty, 20
-IniRead, DimensionAutoSelect, %ConfigFilePath%, Dimension, AutoSelectCharacter, 1
-IniRead, DimensionAutoBeacon, %ConfigFilePath%, Dimension, AutoSelectBeacon, 1
-IniRead, DimensionRetry, %ConfigFilePath%, Dimension, AutoRetry, 0
-IniRead, DimensionAutoExit, %ConfigFilePath%, Dimension, AutoExit, 0
-IniRead, DimensionMaxRuns, %ConfigFilePath%, Dimension, MaxRuns, 0
-}
-
-; 创建默认配置文件
-CreateDefaultConfig()
-{
-global
-DefaultKeys := InitDefaultConfig()
-
-; 写入所有默认按键
-for key, value in DefaultKeys
-{
-IniWrite, %value%, %ConfigFilePath%, Hotkeys, %key%
-}
-
-; 写入通用设置
-IniWrite, 1280x720, %ConfigFilePath%, General, Resolution
-IniWrite, 1, %ConfigFilePath%, General, ShowTooltip
-IniWrite, 74, %ConfigFilePath%, General, TooltipX
-IniWrite, 1021, %ConfigFilePath%, General, TooltipY
-IniWrite, 10, %ConfigFilePath%, General, ScriptDelay
-IniWrite, 0, %ConfigFilePath%, General, MinimizeToTray
-IniWrite, 0, %ConfigFilePath%, General, AutoStart
-
-; 写入多维变量设置
-IniWrite, 20, %ConfigFilePath%, Dimension, Difficulty
-IniWrite, 1, %ConfigFilePath%, Dimension, AutoSelectCharacter
-IniWrite, 1, %ConfigFilePath%, Dimension, AutoSelectBeacon
-IniWrite, 0, %ConfigFilePath%, Dimension, AutoRetry
-IniWrite, 0, %ConfigFilePath%, Dimension, AutoExit
-IniWrite, 0, %ConfigFilePath%, Dimension, MaxRuns
-
-; 初始化统计数据
-IniWrite, 0, %ConfigFilePath%, Statistics, TotalRuns
-IniWrite, 0, %ConfigFilePath%, Statistics, TotalTime
-IniWrite, N/A, %ConfigFilePath%, Statistics, LastRunTime
-}
-
-; 保存配置
-SaveConfig()
-{
-global
-DefaultKeys := InitDefaultConfig()
-
-; 保存所有按键配置
-for key, value in DefaultKeys
-{
-keyValue := %key%
-IniWrite, %keyValue%, %ConfigFilePath%, Hotkeys, %key%
-}
-
-; 保存通用设置
-IniWrite, %Resolution%, %ConfigFilePath%, General, Resolution
-IniWrite, %ShowTooltip%, %ConfigFilePath%, General, ShowTooltip
-IniWrite, %TooltipX%, %ConfigFilePath%, General, TooltipX
-IniWrite, %TooltipY%, %ConfigFilePath%, General, TooltipY
-IniWrite, %ScriptDelay%, %ConfigFilePath%, General, ScriptDelay
-IniWrite, %MinimizeToTray%, %ConfigFilePath%, General, MinimizeToTray
-IniWrite, %AutoStart%, %ConfigFilePath%, General, AutoStart
-
-; 保存多维变量设置
-IniWrite, %DimensionDifficulty%, %ConfigFilePath%, Dimension, Difficulty
-IniWrite, %DimensionAutoSelect%, %ConfigFilePath%, Dimension, AutoSelectCharacter
-IniWrite, %DimensionAutoBeacon%, %ConfigFilePath%, Dimension, AutoSelectBeacon
-IniWrite, %DimensionRetry%, %ConfigFilePath%, Dimension, AutoRetry
-IniWrite, %DimensionAutoExit%, %ConfigFilePath%, Dimension, AutoExit
-IniWrite, %DimensionMaxRuns%, %ConfigFilePath%, Dimension, MaxRuns
-}
-
-; 导出配置到文件
-ExportConfig()
-{
-global
-FileSelectFile, ExportPath, S16, settings_export.ini, 导出配置文件, INI Files (*.ini)
-if (ExportPath != "")
-{
-FileCopy, %ConfigFilePath%, %ExportPath%, 1
-MsgBox, 64, 导出成功, 配置已导出到:`n%ExportPath%
+} else {
+	; 检查INI文件中是否有缺失的键，有则补充
+	for key, defaultValue in KeyMappings {
+		IniRead, ReadValue, %IniFilePath%, Hotkeys, %key%
+	if (ReadValue = "ERROR") {
+		IniWrite, %defaultValue%, %IniFilePath%, Hotkeys, %key%
+		ReadValue := defaultValue
+	}
+	; 更新全局变量
+	%key% := ReadValue
 }
 }
 
-; 从文件导入配置
-ImportConfig()
-{
-global
-FileSelectFile, ImportPath, 3, , 导入配置文件, INI Files (*.ini)
-if (ImportPath != "" && FileExist(ImportPath))
-{
-FileCopy, %ImportPath%, %ConfigFilePath%, 1
-MsgBox, 64, 导入成功, 配置已导入，请重启脚本以应用新配置
-}
-}
+; 设置热键
+Hotkey, %JinwuKey%, Jinwu
+Hotkey, %DimensionKey%, Dimension
+Hotkey, %LingguangKey%, Lingguang
+Hotkey, %TuoteKey%, Tuote
+Hotkey, %NameiKey%, Namei
+Hotkey, %WeierKey%, Weier
+Hotkey, %KaorouKey%, Kaorou
+Hotkey, %LiandianKey%, Liandian
+Hotkey, %FantianKey%, Fantian
+Hotkey, %ShikoudiKey%, Shikoudi
+Hotkey, %FengqianfangtiangouKey%, Fengqianfangtiangou
+Hotkey, %YalishaKey%, Yalisha
+Hotkey, %StopscriptKey%, Stopscript
 
-; 备份配置
-BackupConfig()
-{
-global
-FormatTime, TimeStamp, , yyyyMMdd_HHmmss
-BackupPath := A_ScriptDir . "\settings_backup_" . TimeStamp . ".ini"
-FileCopy, %ConfigFilePath%, %BackupPath%, 1
-MsgBox, 64, 备份成功, 配置已备份到:`n%BackupPath%
-}
-
-; 恢复默认配置
-RestoreDefaultConfig()
-{
-global
-MsgBox, 36, 确认恢复, 确定要恢复所有设置为默认值吗？这将覆盖当前配置。
-IfMsgBox Yes
-{
-FileDelete, %ConfigFilePath%
-CreateDefaultConfig()
-LoadConfig()
-MsgBox, 64, 恢复成功, 所有设置已恢复为默认值，请重启脚本以应用新配置
-}
-}
-
-; ============================================================================
-; 第五部分：统计功能模块（Statistics）
-; ============================================================================
-
-; 加载统计数据
-LoadStatistics()
-{
-global
-IniRead, TotalRuns, %ConfigFilePath%, Statistics, TotalRuns, 0
-IniRead, TotalTime, %ConfigFilePath%, Statistics, TotalTime, 0
-IniRead, LastRunTime, %ConfigFilePath%, Statistics, LastRunTime, 
-SessionRuns := 0
-SessionStartTime := A_TickCount
-}
-
-; 保存统计数据
-SaveStatistics()
-{
-global
-IniWrite, %TotalRuns%, %ConfigFilePath%, Statistics, TotalRuns
-IniWrite, %TotalTime%, %ConfigFilePath%, Statistics, TotalTime
-IniWrite, %LastRunTime%, %ConfigFilePath%, Statistics, LastRunTime
-}
-
-; 记录一次运行
-RecordRun(duration := 0)
-{
-global
-TotalRuns++
-SessionRuns++
-TotalTime += duration
-FormatTime, LastRunTime, , yyyy-MM-dd HH:mm:ss
-SaveStatistics()
-}
-
-; 重置统计数据
-ResetStatistics()
-{
-global
-MsgBox, 36, 确认重置, 确定要重置所有统计数据吗？
-IfMsgBox Yes
-{
-TotalRuns := 0
-TotalTime := 0
-LastRunTime := ""
-SessionRuns := 0
-SessionStartTime := A_TickCount
-SaveStatistics()
-MsgBox, 64, 重置成功, 所有统计数据已重置
-}
-}
-
-; 获取格式化的运行时长
-GetFormattedTime(seconds)
-{
-hours := Floor(seconds / 3600)
-minutes := Floor(Mod(seconds, 3600) / 60)
-secs := Mod(seconds, 60)
-return Format("{:d}h {:d}m {:d}s", hours, minutes, secs)
-}
-
-; 获取当前会话时长
-GetSessionDuration()
-{
-global SessionStartTime
-return Floor((A_TickCount - SessionStartTime) / 1000)
-}
-
-; 显示统计信息窗口
-ShowStatistics()
-{
-global
-sessionDuration := GetSessionDuration()
-
-Gui, StatsGui:New
-Gui, StatsGui:Font, s10, Microsoft YaHei
-Gui, StatsGui:Add, GroupBox, x10 y10 w380 h120, 总体统计
-Gui, StatsGui:Add, Text, x20 y35, 总运行次数：
-Gui, StatsGui:Add, Text, x150 y35, %TotalRuns% 次
-Gui, StatsGui:Add, Text, x20 y60, 总运行时长：
-Gui, StatsGui:Add, Text, x150 y60, % GetFormattedTime(TotalTime)
-Gui, StatsGui:Add, Text, x20 y85, 最后运行时间：
-Gui, StatsGui:Add, Text, x150 y85, %LastRunTime%
-
-Gui, StatsGui:Add, GroupBox, x10 y140 w380 h80, 当前会话统计
-Gui, StatsGui:Add, Text, x20 y165, 会话运行次数：
-Gui, StatsGui:Add, Text, x150 y165, %SessionRuns% 次
-Gui, StatsGui:Add, Text, x20 y190, 会话时长：
-Gui, StatsGui:Add, Text, x150 y190, % GetFormattedTime(sessionDuration)
-
-Gui, StatsGui:Add, Button, x10 y230 w380 h30 gResetStatistics, 重置统计数据
-Gui, StatsGui:Show, w400 h280, 统计信息
-}
-
-StatsGuiClose:
-StatsGuiEscape:
-Gui, StatsGui:Destroy
-return
-
-; ============================================================================
-; 第六部分：设置界面模块（SettingsGUI）
-; 包含 6 个标签页：通用设置、游戏按键、脚本快捷键、多维变量、统计信息、关于
-; ============================================================================
-; 包含 6 个标签页：通用设置、游戏按键、脚本快捷键、多维变量、统计信息、关于
-
-
-ShowSettingsGUI()
-{
+Menu, Tray, NoStandard
+Menu, Tray, Add, 快捷键设置, ShowSettingsGui
+Menu, Tray, Add, 退出程序, ExitScript
+ShowSettingsGUI() {
 	global
-	
-	Gui, SettingsGui:New
-	Gui, SettingsGui:Font, s9, Microsoft YaHei
-	Gui, SettingsGui:Add, Tab3, x10 y10 w580 h500, 通用设置|游戏按键|脚本快捷键|多维变量|统计信息|关于
-	
-	; ========================================================================
-	; Tab 1: 通用设置
-	; ========================================================================
-	Gui, SettingsGui:Tab, 通用设置
-	
-	; 分辨率设置
-	Gui, SettingsGui:Add, GroupBox, x20 y40 w260 h120, 显示设置
-	Gui, SettingsGui:Add, Text, x30 y60, 游戏分辨率：
-	Gui, SettingsGui:Add, DropDownList, x130 y57 w130 vResolution, 1280x720|1920x1080|2560x1440|自定义
-	GuiControl, SettingsGui:ChooseString, Resolution, %Resolution%
-	
-	Gui, SettingsGui:Add, Checkbox, x30 y90 vShowTooltip Checked%ShowTooltip%, 显示状态提示
-	Gui, SettingsGui:Add, Text, x30 y115, 提示位置 X：
-	Gui, SettingsGui:Add, Edit, x110 y112 w60 vTooltipX, %TooltipX%
-	Gui, SettingsGui:Add, Text, x180 y115, Y：
-	Gui, SettingsGui:Add, Edit, x210 y112 w60 vTooltipY, %TooltipY%
-	
-	; 启动设置
-	Gui, SettingsGui:Add, GroupBox, x20 y170 w260 h100, 启动设置
-	Gui, SettingsGui:Add, Checkbox, x30 y190 vMinimizeToTray Checked%MinimizeToTray%, 启动时最小化到托盘
-	Gui, SettingsGui:Add, Checkbox, x30 y215 vAutoStart Checked%AutoStart%, 开机自动启动
-	Gui, SettingsGui:Add, Text, x30 y240, 脚本延迟（毫秒）：
-	Gui, SettingsGui:Add, Edit, x150 y237 w60 vScriptDelay, %ScriptDelay%
-	
-	; 配置管理
-	Gui, SettingsGui:Add, GroupBox, x20 y280 w260 h200, 配置管理
-	Gui, SettingsGui:Add, Button, x30 y305 w230 h30 gExportConfigBtn, 导出配置
-	Gui, SettingsGui:Add, Button, x30 y345 w230 h30 gImportConfigBtn, 导入配置
-	Gui, SettingsGui:Add, Button, x30 y385 w230 h30 gBackupConfigBtn, 备份配置
-	Gui, SettingsGui:Add, Button, x30 y425 w230 h30 gRestoreConfigBtn, 恢复默认设置
-	
-	; ========================================================================
-	; Tab 2: 游戏按键
-	; ========================================================================
-	Gui, SettingsGui:Tab, 游戏按键
-	
-	Gui, SettingsGui:Add, Text, x20 y40, 设置与你游戏内按键对应
-	
-	; 移动按键
-	Gui, SettingsGui:Add, GroupBox, x20 y65 w260 h150, 移动按键
-	Gui, SettingsGui:Add, Text, x30 y85, 前进：
-	Gui, SettingsGui:Add, Hotkey, x100 y82 w150 vUpKey, %UpKey%
-	Gui, SettingsGui:Add, Text, x30 y110, 后退：
-	Gui, SettingsGui:Add, Hotkey, x100 y107 w150 vDownKey, %DownKey%
-	Gui, SettingsGui:Add, Text, x30 y135, 左移：
-	Gui, SettingsGui:Add, Hotkey, x100 y132 w150 vLeftKey, %LeftKey%
-	Gui, SettingsGui:Add, Text, x30 y160, 右移：
-	Gui, SettingsGui:Add, Hotkey, x100 y157 w150 vRightKey, %RightKey%
-	Gui, SettingsGui:Add, Text, x30 y185, 闪避：
-	Gui, SettingsGui:Add, Hotkey, x100 y182 w150 vDodgeKey, %DodgeKey%
-	
-	; 战斗按键
-	Gui, SettingsGui:Add, GroupBox, x300 y65 w260 h150, 战斗按键
-	Gui, SettingsGui:Add, Text, x310 y85, 普攻：
-	Gui, SettingsGui:Add, Hotkey, x380 y82 w150 vAttackKey, %AttackKey%
-	Gui, SettingsGui:Add, Text, x310 y110, 技能1：
-	Gui, SettingsGui:Add, Hotkey, x380 y107 w150 vSkill1Key, %Skill1Key%
-	Gui, SettingsGui:Add, Text, x310 y135, 技能2：
-	Gui, SettingsGui:Add, Hotkey, x380 y132 w150 vSkill2Key, %Skill2Key%
-	Gui, SettingsGui:Add, Text, x310 y160, 技能3：
-	Gui, SettingsGui:Add, Hotkey, x380 y157 w150 vSkill3Key, %Skill3Key%
-	Gui, SettingsGui:Add, Text, x310 y185, 奥义：
-	Gui, SettingsGui:Add, Hotkey, x380 y182 w150 vUltimateKey, %UltimateKey%
-	
-	; 队友按键
-	Gui, SettingsGui:Add, GroupBox, x20 y225 w260 h80, 队友按键
-	Gui, SettingsGui:Add, Text, x30 y245, 队友1奥义：
-	Gui, SettingsGui:Add, Hotkey, x120 y242 w130 vTeammate1Key, %Teammate1Key%
-	Gui, SettingsGui:Add, Text, x30 y270, 队友2奥义：
-	Gui, SettingsGui:Add, Hotkey, x120 y267 w130 vTeammate2Key, %Teammate2Key%
-	
-	; ========================================================================
-	; Tab 3: 脚本快捷键
-	; ========================================================================
-	Gui, SettingsGui:Tab, 脚本快捷键
-	
-	Gui, SettingsGui:Add, Text, x20 y40, 角色自动战斗和功能快捷键设置
-	
-	; 角色自动战斗
-	Gui, SettingsGui:Add, GroupBox, x20 y65 w260 h240, 角色自动战斗
-	Gui, SettingsGui:Add, Text, x30 y85, 金乌：
-	Gui, SettingsGui:Add, Hotkey, x100 y82 w150 vJinwuKey, %JinwuKey%
-	Gui, SettingsGui:Add, Text, x30 y110, 陵光：
-	Gui, SettingsGui:Add, Hotkey, x100 y107 w150 vLingguangKey, %LingguangKey%
-	Gui, SettingsGui:Add, Text, x30 y135, 托特/哈迪斯：
-	Gui, SettingsGui:Add, Hotkey, x130 y132 w120 vTuoteKey, %TuoteKey%
-	Gui, SettingsGui:Add, Text, x30 y160, 娜美：
-	Gui, SettingsGui:Add, Hotkey, x100 y157 w150 vNameiKey, %NameiKey%
-	Gui, SettingsGui:Add, Text, x30 y185, 薇儿：
-	Gui, SettingsGui:Add, Hotkey, x100 y182 w150 vWeierKey, %WeierKey%
-	Gui, SettingsGui:Add, Text, x30 y210, 梵天：
-	Gui, SettingsGui:Add, Hotkey, x100 y207 w150 vFantianKey, %FantianKey%
-	Gui, SettingsGui:Add, Text, x30 y235, 诗寇蒂：
-	Gui, SettingsGui:Add, Hotkey, x100 y232 w150 vShikoudiKey, %ShikoudiKey%
-	Gui, SettingsGui:Add, Text, x30 y260, 樱切：
-	Gui, SettingsGui:Add, Hotkey, x100 y257 w150 vFengqianfangtiangouKey, %FengqianfangtiangouKey%
-	Gui, SettingsGui:Add, Text, x30 y285, 亚莉莎：
-	Gui, SettingsGui:Add, Hotkey, x100 y282 w150 vYalishaKey, %YalishaKey%
-	
-	; 功能快捷键
-	Gui, SettingsGui:Add, GroupBox, x300 y65 w260 h150, 功能快捷键
-	Gui, SettingsGui:Add, Text, x310 y85, 多维变量：
-	Gui, SettingsGui:Add, Hotkey, x390 y82 w140 vDimensionKey, %DimensionKey%
-	Gui, SettingsGui:Add, Text, x310 y110, 自动烤肉：
-	Gui, SettingsGui:Add, Hotkey, x390 y107 w140 vKaorouKey, %KaorouKey%
-	Gui, SettingsGui:Add, Text, x310 y135, 简易连点器：
-	Gui, SettingsGui:Add, Hotkey, x390 y132 w140 vLiandianKey, %LiandianKey%
-	Gui, SettingsGui:Add, Text, x310 y160, 停止脚本：
-	Gui, SettingsGui:Add, Hotkey, x390 y157 w140 vStopscriptKey, %StopscriptKey%
-	
-	; ========================================================================
-	; Tab 4: 多维变量
-	; ========================================================================
-	Gui, SettingsGui:Tab, 多维变量
-	
-	Gui, SettingsGui:Add, Text, x20 y40, 多维变量自动刷分设置（分辨率要求：1280x720）
-	
-	Gui, SettingsGui:Add, GroupBox, x20 y65 w540 h120, 基本设置
-	Gui, SettingsGui:Add, Text, x30 y85, 选择难度：
-	Gui, SettingsGui:Add, DropDownList, x120 y82 w100 vDimensionDifficulty, 15|18|20
-	GuiControl, SettingsGui:ChooseString, DimensionDifficulty, %DimensionDifficulty%
-	Gui, SettingsGui:Add, Checkbox, x30 y110 vDimensionAutoSelect Checked%DimensionAutoSelect%, 自动选择角色（真红）
-	Gui, SettingsGui:Add, Checkbox, x30 y135 vDimensionAutoBeacon Checked%DimensionAutoBeacon%, 自动选择信标
-	Gui, SettingsGui:Add, Text, x30 y160, 注：需解锁信标「赏金猎人」「孤狼之道」「残酷天平」
-	
-	Gui, SettingsGui:Add, GroupBox, x20 y195 w540 h120, 高级设置
-	Gui, SettingsGui:Add, Checkbox, x30 y215 vDimensionRetry Checked%DimensionRetry%, 失败自动重试
-	Gui, SettingsGui:Add, Checkbox, x30 y240 vDimensionAutoExit Checked%DimensionAutoExit%, 完成后自动退出
-	Gui, SettingsGui:Add, Text, x30 y265, 最大运行次数（0=无限制）：
-	Gui, SettingsGui:Add, Edit, x210 y262 w60 vDimensionMaxRuns, %DimensionMaxRuns%
-	
-	; ========================================================================
-	; Tab 5: 统计信息
-	; ========================================================================
-	Gui, SettingsGui:Tab, 统计信息
-	
-	sessionDuration := GetSessionDuration()
-	
-	Gui, SettingsGui:Add, GroupBox, x20 y40 w540 h140, 总体统计
-	Gui, SettingsGui:Add, Text, x30 y65, 总运行次数：
-	Gui, SettingsGui:Add, Text, x150 y65, %TotalRuns% 次
-	Gui, SettingsGui:Add, Text, x30 y95, 总运行时长：
-	Gui, SettingsGui:Add, Text, x150 y95, % GetFormattedTime(TotalTime)
-	Gui, SettingsGui:Add, Text, x30 y125, 最后运行时间：
-	Gui, SettingsGui:Add, Text, x150 y125, %LastRunTime%
-	
-	Gui, SettingsGui:Add, GroupBox, x20 y190 w540 h100, 当前会话统计
-	Gui, SettingsGui:Add, Text, x30 y215, 会话运行次数：
-	Gui, SettingsGui:Add, Text, x150 y215, %SessionRuns% 次
-	Gui, SettingsGui:Add, Text, x30 y245, 会话时长：
-	Gui, SettingsGui:Add, Text, x150 y245, % GetFormattedTime(sessionDuration)
-	
-	Gui, SettingsGui:Add, Button, x20 y300 w540 h40 gResetStatisticsBtn, 重置统计数据
-	
-	; ========================================================================
-	; Tab 6: 关于
-	; ========================================================================
-	Gui, SettingsGui:Tab, 关于
-	
-	Gui, SettingsGui:Font, s11 Bold
-	Gui, SettingsGui:Add, Text, x20 y50, 深空之眼 AHK 自动脚本
-	Gui, SettingsGui:Font, s9 Norm
-	Gui, SettingsGui:Add, Text, x20 y80, 版本：3.1（模块化增强版）
-	
-	Gui, SettingsGui:Add, GroupBox, x20 y110 w540 h100, 原作者信息
-	Gui, SettingsGui:Add, Text, x30 y130, 作者：qstdnx
-	Gui, SettingsGui:Add, Text, x30 y155, 项目地址：https://github.com/qstdnx/AetherGazer-ahk
-	Gui, SettingsGui:Add, Link, x30 y180, 问题反馈：<a href="https://github.com/qstdnx/AetherGazer-ahk/issues">GitHub Issues</a>
-	
-	Gui, SettingsGui:Add, GroupBox, x20 y220 w540 h120, 免责声明
-	Gui, SettingsGui:Font, s8
-	Gui, SettingsGui:Add, Text, x30 y240 w520, 这是 AHK 按键脚本，而不是外挂，没有注入和修改数据，只是模拟键盘鼠标。目前脚本发布至今没有因使用脚本被封号的案例，但仍有风险，勇士对按键脚本的态度可能改变，所以如果造成封号或其他问题，本工具作者不承担任何责任。
-	
-	Gui, SettingsGui:Font, s9 Norm
-	Gui, SettingsGui:Tab
-	
-	; 底部按钮
-	Gui, SettingsGui:Add, Button, x350 y520 w110 h30 gSaveSettingsBtn Default, 保存设置
-	Gui, SettingsGui:Add, Button, x470 y520 w110 h30 gCancelSettingsBtn, 取消
-	
-	Gui, SettingsGui:Show, w600 h565, 深空之眼脚本设置
+	Gui, New
+  Gui, Add, Tab3,,按键设置|自动操作
+  GUI, Tab, 按键设置
+  Gui, Add, Text,, 设置与你游戏内按键对应
+  Gui, Add, Text,, 移动（前）
+  Gui, Add, Hotkey, vUpKey, %UpKey%
+  Gui, Add, Text,, 移动（后）
+  Gui, Add, Hotkey, vDownKey, %DownKey%
+  Gui, Add, Text,, 移动（左）
+  Gui, Add, Hotkey, vLeftKey, %LeftKey%
+  Gui, Add, Text,, 移动（右）
+  Gui, Add, Hotkey, vRightKey, %RightKey%
+	Gui, Add, Text,, 普攻
+	Gui, Add, Hotkey, vAttackKey, %AttackKey%
+	Gui, Add, Text,, 1 技能
+	Gui, Add, Hotkey, vSkill1Key, %Skill1Key%
+	Gui, Add, Text,, 2 技能
+	Gui, Add, Hotkey, vSkill2Key, %Skill2Key%
+	Gui, Add, Text,, 3 技能
+	Gui, Add, Hotkey, vSkill3Key, %Skill3Key%
+	Gui, Add, Text,, 闪避
+	Gui, Add, Hotkey, vDodgeKey, %DodgeKey%
+	Gui, Add, Text,, 奥义
+	Gui, Add, Hotkey, vUltimateKey, %UltimateKey%
+	Gui, Add, Text,, 队友1 奥义
+	Gui, Add, Hotkey, vTeammate1Key, %Teammate1Key%
+	Gui, Add, Text,, 队友2 奥义
+	Gui, Add, Hotkey, vTeammate2Key, %Teammate2Key%
+  Gui, tab, 自动操作
+	Gui, Add, Text,, 金乌
+	Gui, Add, Hotkey, vJinwuKey, %JinwuKey%
+	Gui, Add, Text,, 自动多维变量
+	Gui, Add, Hotkey, vDimensionKey, %DimensionKey%
+	Gui, Add, Text,, 陵光
+	Gui, Add, Hotkey, vLingguangKey, %LingguangKey%
+	Gui, Add, Text,, 托特/哈迪斯/雷前鬼/水姆
+	Gui, Add, Hotkey, vTuoteKey, %TuoteKey%
+	Gui, Add, Text,, 娜美
+	Gui, Add, Hotkey, vNameiKey, %NameiKey%
+	Gui, Add, Text,, 薇儿/光赫拉/瓦吉特/执明
+	Gui, Add, Hotkey, vWeierKey, %WeierKey%
+	Gui, Add, Text,, 自动烤肉
+	Gui, Add, Hotkey, vKaorouKey, %KaorouKey%
+	Gui, Add, Text,, 简易连点器
+	Gui, Add, Hotkey, vLiandianKey, %LiandianKey%
+	Gui, Add, Text,, 梵天
+	Gui, Add, Hotkey, vFantianKey, %FantianKey%
+	Gui, Add, Text,, 诗寇蒂
+	Gui, Add, Hotkey, vShikoudiKey, %ShikoudiKey%
+	Gui, Add, Text,, 樱切（左线）
+	Gui, Add, Hotkey, vFengqianfangtiangouKey, %FengqianfangtiangouKey%
+  Gui, Add, Text,, 亚莉莎（左线）
+	Gui, Add, Hotkey, vYalishaKey, %YalishaKey%
+	Gui, Add, Text,, 停止脚本
+	Gui, Add, Hotkey, vStopscriptKey, %StopscriptKey%
+  Gui, Tab
+	Gui, Add, Button, default, OK
+	Gui, Show, , 设置快捷键
+	return
 }
 
-; GUI 事件处理函数
-SettingsGuiClose:
-SettingsGuiEscape:
-CancelSettingsBtn:
-	Gui, SettingsGui:Destroy
+GuiClose:
+GuiEscape:
+	Gui, Destroy
 return
 
-SaveSettingsBtn:
-	Gui, SettingsGui:Submit, NoHide
-	
-	; 保存所有设置到全局变量
-	SaveConfig()
-	
+ButtonOK:
+	Gui, Submit
+	FileDelete, %IniFilePath%
+	for key, value in KeyMappings {
+		IniWrite, % %key%, %IniFilePath%, Hotkeys, %key%
+	}
+
+	; 更新全局变量
+	for key in KeyMappings {
+		%key% := %key%
+	}
+
 	; 重新设置热键
-	UpdateHotkeys()
-	
-	Gui, SettingsGui:Destroy
-	MsgBox, 64, 保存成功, 设置已保存并应用
-return
-
-ExportConfigBtn:
-	ExportConfig()
-return
-
-ImportConfigBtn:
-	ImportConfig()
-return
-
-BackupConfigBtn:
-	BackupConfig()
-return
-
-RestoreConfigBtn:
-	RestoreDefaultConfig()
-return
-
-ResetStatisticsBtn:
-	ResetStatistics()
-	Gui, SettingsGui:Destroy
-return
-
-; 更新热键函数
-UpdateHotkeys()
-{
-	global
-	
-	; 禁用旧热键
-	Try Hotkey, %JinwuKey%, Off
-	Try Hotkey, %DimensionKey%, Off
-	Try Hotkey, %LingguangKey%, Off
-	Try Hotkey, %TuoteKey%, Off
-	Try Hotkey, %NameiKey%, Off
-	Try Hotkey, %WeierKey%, Off
-	Try Hotkey, %KaorouKey%, Off
-	Try Hotkey, %LiandianKey%, Off
-	Try Hotkey, %FantianKey%, Off
-	Try Hotkey, %ShikoudiKey%, Off
-	Try Hotkey, %FengqianfangtiangouKey%, Off
-	Try Hotkey, %YalishaKey%, Off
-	Try Hotkey, %StopscriptKey%, Off
-	
-	; 重新读取全局变量（从 Submit 获得的值）
-	; 设置新热键
 	Hotkey, %JinwuKey%, Jinwu
 	Hotkey, %DimensionKey%, Dimension
 	Hotkey, %LingguangKey%, Lingguang
@@ -673,634 +213,122 @@ UpdateHotkeys()
 	Hotkey, %FantianKey%, Fantian
 	Hotkey, %ShikoudiKey%, Shikoudi
 	Hotkey, %FengqianfangtiangouKey%, Fengqianfangtiangou
-	Hotkey, %YalishaKey%, Yalisha
-	Hotkey, %StopscriptKey%, Stopscript
-}
+  Hotkey, %YalishaKey%, Yalisha
+  Hotkey, %StopscriptKey%, Stopscript
 
-; ============================================================================
-; 第七部分：浮动控制面板模块（FloatGUI）
-; ============================================================================
-
-; 显示浮动控制面板
-ShowFloatGUI()
-{
-global
-
-; 销毁已存在的窗口
-Gui, FloatGUI:Destroy
-
-; 创建新的浮动窗口
-Gui, FloatGUI:New, +AlwaysOnTop -MinimizeBox +Caption
-Gui, FloatGUI:Font, s9, Microsoft YaHei
-
-; 添加标题
-Gui, FloatGUI:Font, s10 Bold
-Gui, FloatGUI:Add, Text, x10 y10 w260 Center, 深空之眼 - 控制面板
-Gui, FloatGUI:Font, s9 Norm
-
-; 分隔线
-Gui, FloatGUI:Add, Text, x10 y35 w260 h1 0x10
-
-; 战斗脚本选择
-Gui, FloatGUI:Add, GroupBox, x10 y45 w260 h80, 战斗脚本
-Gui, FloatGUI:Add, Text, x20 y65, 选择角色：
-Gui, FloatGUI:Add, DropDownList, x20 y85 w240 vFloatGUI_ScriptSelector, 金乌|陵光|托特/哈迪斯|娜美|薇儿|梵天|诗寇蒂|樱切|亚莉莎
-GuiControl, FloatGUI:Choose, FloatGUI_ScriptSelector, 1
-
-; 战斗脚本控制按钮
-Gui, FloatGUI:Add, Button, x20 y135 w115 h30 gFloatGUI_StartScript, 启动脚本
-Gui, FloatGUI:Add, Button, x145 y135 w115 h30 gFloatGUI_StopScript, 停止脚本
-
-; 功能按钮组
-Gui, FloatGUI:Add, GroupBox, x10 y175 w260 h120, 功能
-Gui, FloatGUI:Add, Button, x20 y195 w240 h30 gFloatGUI_StartDimension, 启动多维变量
-Gui, FloatGUI:Add, Button, x20 y230 w240 h30 gFloatGUI_OpenSettings, 打开设置
-Gui, FloatGUI:Add, Button, x20 y265 w240 h30 gFloatGUI_Exit, 退出程序
-
-; 状态栏
-Gui, FloatGUI:Add, Text, x10 y305 w260 h1 0x10
-Gui, FloatGUI:Add, Text, x10 y310 w260 vFloatGUI_StatusText Center, 状态：就绪
-
-; 显示窗口
-Gui, FloatGUI:Show, w280 h340, 深空之眼控制面板
-}
-
-; 启动选中的战斗脚本
-FloatGUI_StartScript:
-Gui, FloatGUI:Submit, NoHide
-
-if (FloatGUI_ScriptRunning)
-{
-GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：脚本已在运行中
-return
-}
-
-; 根据选择执行对应的脚本
-if (FloatGUI_ScriptSelector = "金乌")
-{
-FloatGUI_SelectedScript := "金乌"
-gosub, Jinwu
-}
-else if (FloatGUI_ScriptSelector = "陵光")
-{
-FloatGUI_SelectedScript := "陵光"
-gosub, Lingguang
-}
-else if (FloatGUI_ScriptSelector = "托特/哈迪斯")
-{
-FloatGUI_SelectedScript := "托特/哈迪斯"
-gosub, Tuote
-}
-else if (FloatGUI_ScriptSelector = "娜美")
-{
-FloatGUI_SelectedScript := "娜美"
-gosub, Namei
-}
-else if (FloatGUI_ScriptSelector = "薇儿")
-{
-FloatGUI_SelectedScript := "薇儿"
-gosub, Weier
-}
-else if (FloatGUI_ScriptSelector = "梵天")
-{
-FloatGUI_SelectedScript := "梵天"
-gosub, Fantian
-}
-else if (FloatGUI_ScriptSelector = "诗寇蒂")
-{
-FloatGUI_SelectedScript := "诗寇蒂"
-gosub, Shikoudi
-}
-else if (FloatGUI_ScriptSelector = "樱切")
-{
-FloatGUI_SelectedScript := "樱切"
-gosub, Fengqianfangtiangou
-}
-else if (FloatGUI_ScriptSelector = "亚莉莎")
-{
-FloatGUI_SelectedScript := "亚莉莎"
-gosub, Yalisha
-}
-
-FloatGUI_ScriptRunning := true
-GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：%FloatGUI_SelectedScript% 脚本运行中
 return
 
-; 停止当前运行的脚本
-FloatGUI_StopScript:
-if (!FloatGUI_ScriptRunning and FloatGUI_SelectedScript = "")
+;------------------------------------------------深空之眼下才有效果 ↓↓↓
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+SysGet, VirtualWidth, 16
+SysGet, VirtualHeight, 17
+CoordMode, ToolTip, Screen
+;-------------------------------------------------定义变量 ↓↓↓
+GetColor(x,y)
 {
-GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：没有运行中的脚本
-return
+	PixelGetColor, color, x, y,  RGB
+	StringRight color,color,10 ;
+	return color
 }
+;这个游戏指针会干扰window spy取色，建议换截图工具取色。
+;------------------------------------------------金乌飞天,小键盘1启动 ↓↓↓
 
-gosub, Stopscript
-FloatGUI_ScriptRunning := false
-FloatGUI_SelectedScript := ""
-GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：脚本已停止
-return
-
-; 启动多维变量模式
-FloatGUI_StartDimension:
-GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：多维变量模式启动中...
-gosub, Dimension
-GuiControl, FloatGUI:, FloatGUI_StatusText, 状态：多维变量模式运行中
-return
-
-; 打开设置界面
-FloatGUI_OpenSettings:
-ShowSettingsGUI()
-return
-
-; 退出程序
-FloatGUI_Exit:
-ExitApp
-return
-
-; 窗口关闭事件
-FloatGUIGuiClose:
-FloatGUIGuiEscape:
-; 最小化到托盘而不是关闭
-Gui, FloatGUI:Hide
-return
-
-; 显示浮动面板的函数
-ShowFloatPanel()
-{
-Gui, FloatGUI:Show
-}
-
-; 隐藏浮动面板的函数
-HideFloatPanel()
-{
-Gui, FloatGUI:Hide
-}
-
-
-; ============================================================================
-; 第八部分：金乌自动战斗（Jinwu）
-; ============================================================================
-
+1_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
 Jinwu:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-1_Enable := !1_Enable
-if (1_Enable = false)
-{
-SetTimer, Press1, Off
-ToolTip
-}
-else
-{
-Sleep 100
-SetTimer, Press1, 10
-if (ShowTooltip)
-ToolTip, 金乌：启动, %TooltipX%, %TooltipY%
-}
-}
-}
-
-Press1:
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-loop
-{
-if (GetColor(1161, 692) == "0xFFFFFF")
-{
-Send, {%Skill3Key%}
-Sleep 10
-Send, {%Skill3Key%}
-}
-else
-{
-break
-}
-}
-Send, {%Skill1Key%}
-Sleep 10
-Send, {%Skill1Key%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Skill2Key%}
-Sleep 10
-Send, {%UltimateKey%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Teammate1Key%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Teammate2Key%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-}
-else
-{
-SetTimer, Press1, Off
-ToolTip
-1_Enable := false
-}
-return
-
-; ============================================================================
-; 第九部分：陵光自动战斗（Lingguang）
-; ============================================================================
-
-Lingguang:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-3_Enable := !3_Enable
-if (3_Enable = false)
-{
-SetTimer, Press3, Off
-ToolTip
-}
-else
-{
-Sleep 100
-SetTimer, Press3, 10
-if (ShowTooltip)
-ToolTip, 陵光：启动, %TooltipX%, %TooltipY%
-}
-}
-}
-
-Press3:
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-Send, {%AttackKey%}
-Sleep 250
-Send, {%Skill1Key%}
-Sleep 250
-Send, {%UltimateKey%}
-Send, {%Teammate1Key%}
-Send, {%Teammate2Key%}
-}
-else
-{
-SetTimer, Press3, Off
-ToolTip
-3_Enable := false
-}
-return
-
-; ============================================================================
-; 第十部分：托特/哈迪斯自动战斗（Tuote）
-; ============================================================================
-
-Tuote:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-4_Enable := !4_Enable
-if (4_Enable = false)
-{
-SetTimer, Press4, Off
-ToolTip
-}
-else
-{
-Sleep 100
-SetTimer, Press4, 10
-if (ShowTooltip)
-ToolTip, 托特/哈迪斯/雷前鬼/水姆：启动, %TooltipX%, %TooltipY%
-}
-}
-}
-
-Press4:
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-Send, {%AttackKey% Down}
-Sleep, 500
-Send, {%AttackKey% Up}
-Send, {%Skill3Key%}
-Sleep 10
-Send, {%Skill3Key%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Skill1Key%}
-Sleep 10
-Send, {%Skill1Key%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Skill2Key%}
-Sleep 10
-Send, {%UltimateKey%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Teammate1Key%}
-Sleep 10
-Send, {%Teammate2Key%}
-Sleep 10
-}
-else
-{
-SetTimer, Press4, Off
-ToolTip
-4_Enable := false
-}
-return
-
-; ============================================================================
-; 第十一部分：娜美自动战斗（Namei）
-; ============================================================================
-
-Namei:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-5_Enable := !5_Enable
-if (5_Enable = false)
-{
-SetTimer, Press5, Off
-ToolTip
-}
-else
-{
-Sleep 100
-Send, {%Skill1Key%}{%AttackKey%}
-SetTimer, Press5, 10
-if (ShowTooltip)
-ToolTip, 娜美：启动, %TooltipX%, %TooltipY%
-}
-}
-}
-
-Press5:
-if WinActive("ahk_exe AetherGazer.exe")
-{
-if (GetColor(1174, 684) == "0xFFFFFF")
-{
-Send, {%DodgeKey%}
-Sleep 400
-Send, {%AttackKey%}
-Sleep 300
-Send, {%AttackKey%}
-Sleep 700
-Send, {%AttackKey%}
-Sleep 600
-Send, {%Skill3Key%}
-Sleep 1400
-Send, {%Skill2Key%}{%Skill1Key%}
-}
-Sleep 10
-Send, {%AttackKey%}
-if (GetColor(1090, 672) == "0xFFFFFF")
-{
-Sleep 150
-Send, {%Skill2Key%}
-}
-Sleep 10
-Send, {%AttackKey%}
-if (GetColor(1016, 697) == "0xFFFFFF")
-{
-Sleep 150
-Send, {%Skill1Key%}
-}
-Send, {%UltimateKey%}
-Sleep 10
-Send, {%AttackKey%}
-Sleep 10
-Send, {%Teammate1Key%}
-Sleep 10
-Send, {%Teammate2Key%}
-Sleep 10
-}
-else
-{
-SetTimer, Press5, Off
-ToolTip
-5_Enable := false
-}
-return
-
-; ============================================================================
-; 第十二部分：薇儿自动战斗（Weier）
-; ============================================================================
-
-Weier:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-6_Enable := !6_Enable
-if (6_Enable = false)
-{
-SetTimer, Press6, Off
-ToolTip
-}
-else
-{
-Sleep 100
-SetTimer, Press6, 10
-if (ShowTooltip)
-ToolTip, 薇儿/光赫拉/瓦吉特/执明：启动, %TooltipX%, %TooltipY%
-}
-}
-}
-
-Press6:
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-Send, {%Skill3Key%}
-Sleep 5
-Send, {%AttackKey%}
-Sleep 5
-Send, {%Skill1Key%}
-Sleep 5
-Send, {%UltimateKey%}
-Sleep 5
-Send, {%AttackKey%}
-Sleep 5
-Send, {%Skill2Key%}
-Sleep 5
-Send, {%Teammate1Key%}
-Sleep 5
-Send, {%Skill1Key%}
-Sleep 5
-Send, {%Teammate2Key%}
-Sleep 5
-Send, {%Skill2Key%}
-Sleep 5
-}
-else
-{
-SetTimer, Press6, Off
-ToolTip
-6_Enable := false
-}
-return
-
-; ============================================================================
-; 第十三部分：梵天自动战斗（Fantian）
-; ============================================================================
-
-Fantian:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-11_Enable := !11_Enable
-if (11_Enable = false)
-{
-SetTimer, Press11, Off
-ToolTip
-}
-else
-{
-Sleep 100
-SetTimer, Press11, 10
-if (ShowTooltip)
-ToolTip, 梵天：启动, %TooltipX%, %TooltipY%
-}
-}
-}
-
-Press11:
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-if (GetColor(1218, 681) == "0xFFFFFF" and GetColor(910, 683) != "0xFFFFFF")
-{
-Send, {%DodgeKey% Down}
-Sleep, 500
-Send, {%DodgeKey% Up}
-}
-Send, {%Skill3Key%}
-Sleep 5
-Send, {%AttackKey%}
-Sleep 5
-Send, {%Skill1Key%}
-Sleep 5
-Send, {%UltimateKey%}
-Sleep 5
-Send, {%AttackKey%}
-Sleep 5
-Send, {%Skill2Key%}
-Sleep 5
-Send, {%Teammate2Key%}
-Sleep 5
-Send, {%Skill1Key%}
-Sleep 5
-Send, {%AttackKey%}
-Sleep 5
-Send, {%Skill2Key%}
-Sleep 5
-}
-else
-{
-SetTimer, Press11, Off
-ToolTip
-11_Enable := false
-}
-return
-
-; ============================================================================
-; 第十四部分：诗寇蒂自动战斗（Shikoudi）
-; ============================================================================
-
-Shikoudi:
-{
-if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-{
-12_Enable := !12_Enable
-if (12_Enable = false)
-{
-ToolTip
-}
-else
-{
-Sleep 100
-if (ShowTooltip)
-ToolTip, 诗寇蒂：启动, %TooltipX%, %TooltipY%
-gosub, Press12
-}
-}
-}
-
-Press12:
-loop
-{
-if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !12_Enable)
-{
-ToolTip
-break
-}
-; 优先检测技能3
-if (GetColor(1157, 683) == "0xFFFFFF" and GetColor(1173, 695) == "0xFFFFFF" and GetColor(770, 609) == "0xFFFFFF")
-{
-; 左线、右线神格, 化身槽满, 长按3
-Send, {%Skill3Key% Down}
-Sleep, 10000
-Send, {%Skill3Key% Up}
-Sleep, 10
-}
-else if (GetColor(1157, 683) == "0xFFFFFF" or GetColor(1166, 668) == "0xFFFFFF" or GetColor(1143, 677) == "0xFFFFFF")
-{
-; 化身槽不满, 图标有两种形态
-Send, {%Skill3Key%}
-Sleep, 10
-}
-; 其次检测技能2
-else if (GetColor(1097, 701) == "0xFFFFFF" and GetColor(1085, 700) == "0xFFFFFF")
-{
-Send, {%Skill2Key%}
-Sleep, 10
-}
-else
-{
-Send, {%AttackKey%}
-Sleep, 10
-}
-Send, {%UltimateKey%}
-Sleep, 10
-Send, {%Teammate1Key%}
-Sleep, 10
-Send, {%Teammate2Key%}
-Sleep, 10
-}
-return
-
-; ============================================================================
-; 第十五部分：多维变量自动刷分（Dimension）
-; 注意：此模块依赖 FindText 图像识别功能
-; ============================================================================
-
-
-
-Dimension:
-{
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 	{
-		2_Enable := !2_Enable
-		if (2_Enable = false)
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 		{
-			SetTimer, Press2, Off
-			ToolTip
-		}
-		else
-		{
-			if (ShowTooltip)
-				ToolTip, 多维变量：启动, %TooltipX%, %TooltipY%
-			Sleep 100
-			Press2()
+			1_Enable :=!1_Enable
+			if (1_Enable=false)
+			{
+				SetTimer, Press1, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				SetTimer, Press1, 10  ;
+				ToolTip, 金乌：启动, 74, 1021
+			}
 		}
 	}
-}
 
+Press1:
+	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	{
+		loop{
+			if (GetColor(1161, 692)=="0xFFFFFF")
+			{
+				Send, {%Skill3Key%}
+				Sleep 10
+				Send, {%Skill3Key%}
+			}
+			else
+			{
+				break
+			}
+		}
+		Send, {%Skill1Key%}
+		Sleep 10
+		Send, {%Skill1Key%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Skill2Key%}
+		Sleep 10
+		Send, {%UltimateKey%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Teammate1Key%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Teammate2Key%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+	}
+	else
+	{
+		SetTimer, Press1, Off
+		ToolTip
+		1_Enable= false
+	}
+return
+
+;------------------------------------------------自动多维变量,要求分辨率1280x720, 小键盘2启动 ↓↓↓
+2_Enable=false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Dimension:
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			2_Enable := !2_Enable
+			if (2_Enable=false)
+			{
+				SetTimer, Press2, Off
+				ToolTip
+			}
+			else
+			{
+				ToolTip, 多维变量：启动, 74, 1021 ; 设置ToolTip的显示内容和位置坐标
+				Sleep 100
+				Press2()
+			}
+		}
+	}
 Press2()
 {
 	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 	{
+#NoEnv
+		SetWorkingDir %A_ScriptDir%
 		CoordMode, Mouse, Window
 		SendMode Input
 		SetTitleMatchMode 2
+#WinActivateForce
 		SetControlDelay 1
 		SetWinDelay 0
 		SetKeyDelay -1
@@ -1309,11 +337,11 @@ Press2()
 		{
 			;点击开始挑战
 			Text:="|<>*204$83.zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzjzzzzzwzz003sz7yD8znt7y007lwTwSFzbm7w00DXsbsYWT1aDz7lw1X7010y1CTyDXs36C121w20TwT7sYED647tk0TsyDl00SC8DnU3y003W00QCFzXVbs007AzzsMVw1XDk00CF03011s3YTyDXwW06221l71zwT7sA0D44HbC7zsyDsMwSC8zCQBzXwTkFswQFiQ0ly7szU3lslXAs0XsTly803l30M0EDlzXsO060D0k7kTrzDtwSCAy3zzlzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
-			ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
-			if (ok:=FindText(X, Y, 1075-150000, 770-150000, 1075+150000, 770+150000, 0, 0, Text))
-			{
-				FindText().Click(X, Y, "L")
-			}
+      ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
+      if (ok:=FindText(X, Y, 1075-150000, 770-150000, 1075+150000, 770+150000, 0, 0, Text))
+      {
+        FindText().Click(X, Y, "L")
+      }
 			;难度选择
 			Sleep, 500
 			Click, 562, 674 Left, Down
@@ -1364,6 +392,7 @@ Press2()
 			Click, 235, 702
 			Sleep, 500
 			Text:="|<>*117$71.0Dzzzzzzzza00jzzzzzzzzi00PzzzzzzzzA0MbzzzzzzzzM1kCzTzzzxzzk348gjzzzzzzUCE03DzzjzzzETU04Izzzzzy1zU0N3yzzzzw3y0Am5nzzzzt7zLng/zzzzzwTzzzTzzzzzyAzzzzzzzzzzwNTzzzzzzzzzvnzzzzzzzzzzmvzzzzzzzzzzpjzzzzzzzzzzbTzzzztzzzzzizzzzznzzzzzzzTzzzXzzvzzzzzzzy7zznzzzzzzzwDzzXzzzzzzzkDzz7zzTzzzvUTzy7zyzzzzq0zzwDzz"
+
 			if (ok:=FindText(X, Y, 161-150000, 436-150000, 161+150000, 436+150000, 0, 0, Text))
 			{
 				FindText().Click(X, Y, "L")
@@ -1405,7 +434,7 @@ Press2()
 			Click, 1183, 702
 			Sleep, 500
 			;选珍宝
-			Text:="|<>*167$45.zzzzzzzzzzzzzzzzzrzzzzzzwTwzXzw10DXwTzU81wDXzyCADlwTzlU0zTXzyA07zwTzk00kTXzw28a3sTzUE0sT1zsG07XsDz2E0wT1zsG8bWl7zmE0w68zyG07U3Xzk3Aw0QDy0NbW7kzk30yFz7zws7yTxzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzw"
+			Text:=  "|<>*167$45.zzzzzzzzzzzzzzzzzrzzzzzzwTwzXzw10DXwTzU81wDXzyCADlwTzlU0zTXzyA07zwTzk00kTXzw28a3sTzUE0sT1zsG07XsDz2E0wT1zsG8bWl7zmE0w68zyG07U3Xzk3Aw0QDy0NbW7kzk30yFz7zws7yTxzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzw"
 			ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
 			if (ok:=FindText(X, Y, 886-150000, 742-150000, 886+150000, 742+150000, 0, 0, Text))
 			{
@@ -1429,6 +458,7 @@ Press2()
 			Sleep, 500
 			;打完只有一个珍宝时，确认默认被选中时的图片
 			text1:="|<>*202$43.zzzzzzzzzzzzzzzzrzzzzzzlztyDz0M3sT7zU81yDXzwMEz3lzyM0DnszyA03zwTz001UyDz0W8kT3zUE0QDVzV80D7UzkYF7XkDwG8Xls7z901s8lzYU0w0MzkF4S4SDs1WD4T3w0k7YDlzws7zDwzzzzzzzzzzzzzzzzzzzzzzzzzzzzzk"
+
 			;打怪
 			loop
 			{
@@ -1460,9 +490,9 @@ Press2()
 					break
 				}
 			}
-			Click, 642, 400
-			Sleep, 500
-			Click, 745, 643
+      Click, 642, 400
+      Sleep, 500
+      Click, 745, 643
 			Sleep, 1000
 			;退出
 			Send, {Alt}
@@ -1471,7 +501,7 @@ Press2()
 			Sleep, 500
 			Click, 1000, 692
 			Sleep, 500
-			Send, {Enter}
+			Send,   {Enter}
 			Text:="|<>*202$39.zzzzzzzzzzzzzvzzzwzyA0DzbzkU1wwsz0TDbb7wU1wwszw0Dbb7kXtw00w40DU07kU0w00z4F7zbzsW1swwT4ED7bXsUEswwT07b7bXk3ws00QE03003nU0s00Tzzzzzbzzzzzzw"
 			ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
 			if (ok:=FindText(X, Y, 1183-150000, 803-150000, 1183+150000, 803+150000, 0, 0, Text))
@@ -1485,47 +515,263 @@ Press2()
 	{
 		SetTimer, Press2, Off
 		ToolTip
-		2_Enable := false
+		2_Enable=false
 	}
 }
 return
-
-; ============================================================================
-; 第十六部分：其他功能（烤肉、连点器、樱切、亚莉莎）
-; ============================================================================
-
-; 闲暇时刻自动烤肉
-
-
-Kaorou:
-{
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+;------------------------------------------------陵光自动操作，小键盘3启动 ↓↓↓
+3_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Lingguang:
 	{
-		7_Enable := !7_Enable
-		if (7_Enable = false)
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 		{
-			SetTimer, Press7, Off
-			ToolTip
-		}
-		else
-		{
-			Sleep 100
-			SetTimer, Press7, 10
-			if (ShowTooltip)
-				ToolTip, 烤肉：启动, %TooltipX%, %TooltipY%
+			3_Enable :=!3_Enable
+			if (3_Enable=false)
+			{
+				SetTimer, Press3, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				SetTimer, Press3, 10  ;
+				ToolTip, 陵光：启动, 74, 1021
+			}
 		}
 	}
-}
+
+Press3:
+	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	{
+		Send, {%AttackKey%}
+		Sleep 250
+		Send, {%Skill1Key%}
+		Sleep 250
+		Send, {%UltimateKey%}
+		Send, {%Teammate1Key%}
+		Send, {%Teammate2Key%}
+	}
+	else
+	{
+		SetTimer, Press3, Off
+		ToolTip
+		1_Enable= false
+	}
+return
+
+;------------------------------------------------托特或哈迪斯自动战斗,小键盘4启动 ↓↓↓
+
+4_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Tuote:
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			4_Enable :=!4_Enable
+			if (4_Enable=false)
+			{
+				SetTimer, Press4, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				SetTimer, Press4, 10  ;
+				ToolTip, 托特/哈迪斯/雷前鬼/水姆：启动, 74, 1021
+			}
+		}
+	}
+
+Press4:
+	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	{
+		Send, {%AttackKey% Down}
+		Sleep, 500
+		Send, {%AttackKey% Up}
+		Send, {%Skill3Key%}
+		Sleep 10
+		Send, {%Skill3Key%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Skill1Key%}
+		Sleep 10
+		Send, {%Skill1Key%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Skill2Key%}
+		Sleep 10
+		Send, {%UltimateKey%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Teammate1Key%}
+		Sleep 10
+		Send, {%Teammate2Key%}
+		Sleep 10
+	}
+	else
+	{
+		SetTimer, Press4, Off
+		ToolTip
+		4_Enable= false
+	}
+return
+;------------------------------------------------娜美自动战斗,小键盘5启动 ↓↓↓
+5_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Namei:
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			5_Enable :=!5_Enable
+			if (5_Enable=false)
+			{
+				SetTimer, Press5, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				Send, {%Skill1Key%}{%AttackKey%}
+				SetTimer, Press5, 10  ;
+				ToolTip, 娜美：启动, 74, 1021
+			}
+		}
+	}
+
+Press5:
+	if WinActive("ahk_exe AetherGazer.exe")
+	{
+		if (GetColor(1174, 684)=="0xFFFFFF")
+		{
+			Send, {%DodgeKey%}
+			Sleep 400
+			Send, {%AttackKey%}
+			Sleep 300
+			Send, {%AttackKey%}
+			Sleep 700
+			Send, {%AttackKey%}
+			Sleep 600
+			Send, {%Skill3Key%}
+			Sleep 1400
+			Send, {%Skill2Key%}{%Skill1Key%}
+		}
+		Sleep 10
+		Send, {%AttackKey%}
+		if (GetColor(1090, 672)=="0xFFFFFF")
+		{
+			Sleep 150
+			Send, {%Skill2Key%}
+		}
+		Sleep 10
+		Send, {%AttackKey%}
+		if (GetColor(1016, 697)=="0xFFFFFF")
+		{
+			Sleep 150
+			Send, {%Skill1Key%}
+		}
+		Send, {%UltimateKey%}
+		Sleep 10
+		Send, {%AttackKey%}
+		Sleep 10
+		Send, {%Teammate1Key%}
+		Sleep 10
+		Send, {%Teammate2Key%}
+		Sleep 10
+	}
+	else
+	{
+		SetTimer, Press5, Off
+		ToolTip
+		5_Enable= false
+	}
+return
+;------------------------------------------------光薇儿自动战斗,小键盘6启动 ↓↓↓
+6_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Weier:
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			6_Enable :=!6_Enable
+			if (6_Enable=false)
+			{
+				SetTimer, Press6, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				SetTimer, Press6, 10  ;
+				ToolTip, 薇儿/光赫拉/瓦吉特/执明：启动, 74, 1021
+			}
+		}
+	}
+
+Press6:
+	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	{
+		Send, {%Skill3Key%}
+		Sleep 5
+		Send, {%AttackKey%}
+		Sleep 5
+		Send, {%Skill1Key%}
+		Sleep 5
+		Send, {%UltimateKey%}
+		Sleep 5
+		Send, {%AttackKey%}
+		Sleep 5
+		Send, {%Skill2Key%}
+		Sleep 5
+		Send, {%Teammate1Key%}
+		Sleep 5
+		Send, {%Skill1Key%}
+		Sleep 5
+		Send, {%Teammate2Key%}
+		Sleep 5
+		Send, {%Skill2Key%}
+		Sleep 5
+	}
+	else
+	{
+		SetTimer, Press6, Off
+		ToolTip
+		6_Enable= false
+	}
+return
+;------------------------------------------------闲暇时刻自动烤肉，小键盘7启动↓↓↓
+7_Enable= false
+Kaorou:
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			7_Enable := !7_Enable
+			if (7_Enable = false)
+			{
+				SetTimer, Press7, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				SetTimer, Press7, 10
+				ToolTip, 烤肉：启动, 74, 1021
+			}
+		}
+	}
 
 Press7:
 	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 	{
 		color := GetColor(691, 180)
-		if (IsColorClose(color, "0xde6566", 10))
+		if (IsColorClose(color, "0xde6566", 10))  ; 容差设为10
 		{
 			Send, i
 		}
-		if (IsColorClose(color, "0x4abbf1", 10))
+		if (IsColorClose(color, "0x4abbf1", 10))  ; 容差设为10
 		{
 			Send, u
 		}
@@ -1534,34 +780,48 @@ Press7:
 	{
 		SetTimer, Press7, Off
 		ToolTip
-		7_Enable := false
+		7_Enable = false
 	}
 return
 
-; ============================================================================
-global Inputkey := ""
+; 判断两个颜色值是否在容差范围内
+IsColorClose(color1, color2, tolerance)
+{
+	color1 := "0x" SubStr(color1, 3)
+	color2 := "0x" SubStr(color2, 3)
 
+	r1 := (color1 >> 16) & 0xFF
+	g1 := (color1 >> 8) & 0xFF
+	b1 := color1 & 0xFF
+
+	r2 := (color2 >> 16) & 0xFF
+	g2 := (color2 >> 8) & 0xFF
+	b2 := color2 & 0xFF
+
+	if (Abs(r1 - r2) <= tolerance && Abs(g1 - g2) <= tolerance && Abs(b1 - b2) <= tolerance)
+	{
+		return true
+	}
+	return false
+}
+;--------------------------简易连点器功能，右ctrl+任意键连点，小键盘9启动自定义连点↓↓↓
+9_Enable := false
+Inputkey := ""
 RControl::
 	Input, Inputkey, L1 I V, {MouseX, MouseY}
 	9_Enable := true
-	loop
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			if (9_Enable)
-			{
+	loop {
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe"){
+			if (9_Enable){
 				Send, %Inputkey%
 				Sleep, 50
 				ToolTip, %Inputkey% 键连点中，按%StopscriptKey%停止
 			}
-			if (!9_Enable or Inputkey = "")
-			{
+			if (!9_Enable or Inputkey=""){
 				ToolTip
 				break
 			}
-		}
-		else
-		{
+		} else {
 			9_Enable := false
 			ToolTip
 			break
@@ -1569,59 +829,223 @@ RControl::
 	}
 return
 
+;可记忆版本，容易卡键
+; keyToClick := ""
+; RControl::
+;     Input, Inputkey, L1 I V, {MouseX, MouseY}
+;     keyToClick := keyToClick . Inputkey
+;     9_Enable := true
+;     Loop {
+;         If WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe"){
+;         if (9_Enable){
+;             Send, %keyToClick%
+;             Sleep, 50
+;             Tooltip, %keyToClick% 键连点中，按%StopscriptKey%停止`n按右alt键暂停，再次点击右ctrl+任意键同时连点暂停前记录的按键
+;             }
+;             if (!9_Enable or keyToClick=""){
+;             Tooltip
+;             break
+;             }
+;         } else {
+;         9_Enable := false
+;         Tooltip
+;         break
+;         }
+;     }
+;     return
+
+;连点鼠标，导致rctrl失效
+; RControl & LButton::
+;     Loop {
+;     If WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe"){
+;         if (9_Enable)
+;         Click
+;         Sleep, 50
+;         ToolTip,鼠标左键连点中，`n间隔50毫秒，按%StopscriptKey%停止
+;         } else {
+;         9_Enable := false
+;         ToolTip
+;         break
+;         }
+;     }
+;     return
+
+; RAlt::
+;     9_Enable := false
+;     return
+
 Liandian:
-{
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		gosub, 连点弹框输入
-	return
-}
-
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+			gosub, 连点弹框输入
+		return
+	}
 连点弹框输入:
-	Gui, MouseClickGui:New
-	Gui, MouseClickGui:+AlwaysOnTop
-	Gui, MouseClickGui:Font, s9, Microsoft YaHei
-	Gui, MouseClickGui:Add, Text, , 填写连点的按键：`n同时连按多个按键直接填入即可，例如填入jkio为同时连点jkio四个按键`n特殊按键用{}圈住，例如鼠标左键为{LButton}，空格键为{Space}，左Shift为{LShift}
-	Gui, MouseClickGui:Add, Edit, w400 v连点按键, {LButton}
-	Gui, MouseClickGui:Add, Text, , 连点间隔（单位毫秒）：
-	Gui, MouseClickGui:Add, Edit, w400 v连点间隔, 50
-	Gui, MouseClickGui:Add, Button, default g连点确认, 确认
-	Gui, MouseClickGui:Show, , 按键连点
+	Gui, MouseClickGui: New
+	Gui, MouseClickGui: +AlwaysOnTop
+	Gui, MouseClickGui: Add, Text, , 填写连点的按键：`n同时连按多个按键直接填入即可，例如填入jkio为同时连点jkio四个按键`n特殊按键用{}圈住，例如鼠标左键为{LButton}，空格键为{Space}，左Shift为{LShift}
+	Gui, MouseClickGui: Add, Edit, w400 v连点按键, {LButton}
+	Gui, MouseClickGui: Add, Text, , 连点间隔（单位毫秒）：
+	Gui, MouseClickGui: Add, Edit, w400 v连点间隔, 50
+	Gui, MouseClickGui: Add, Button, default g连点确认, 确认
+	Gui, MouseClickGui: Show, , 按键连点
 return
-
 连点确认:
-	Gui, MouseClickGui:Submit
-	global WhichButton := 连点按键
-	global interval := 连点间隔
+	Gui, MouseClickGui: Submit
+	global WhichButton:= 连点按键
+	global interval:= 连点间隔
 	SetTimer, ContinuousClick, %连点间隔%
 return
 
 ContinuousClick:
 	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 		Send, %WhichButton%
-	ToolTip, %WhichButton%键连点中，`n间隔%interval%毫秒，按%StopscriptKey%停止
+	ToolTip,%WhichButton%键连点中，`n间隔%interval%毫秒，按%StopscriptKey%停止
 return
 
-; 樱切（左线）自动战斗
-; ============================================================================
-
-Fengqianfangtiangou:
-{
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+;------------------------------------------------梵天自动战斗,Ctrl+小键盘1启动 ↓↓↓
+11_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Fantian:
 	{
-		13_Enable := !13_Enable
-		if (13_Enable = false)
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 		{
-			ToolTip
-		}
-		else
-		{
-			Sleep 100
-			if (ShowTooltip)
-				ToolTip, 樱切（左线）：启动, %TooltipX%, %TooltipY%
-			gosub, Press13
+			11_Enable :=!11_Enable
+			if (11_Enable=false)
+			{
+				SetTimer, Press11, Off
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				SetTimer, Press11, 10  ;
+				ToolTip, 梵天：启动, 74, 1021
+			}
 		}
 	}
-}
+
+Press11:
+	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	{
+		if (GetColor(1218, 681)=="0xFFFFFF" and GetColor(910, 683)!=="0xFFFFFF")
+		{
+			Send, {%DodgeKey% Down}
+			Sleep, 500
+			Send, {%DodgeKey% Up}
+		}
+		Send, {%Skill3Key%}
+		Sleep 5
+		Send, {%AttackKey%}
+		Sleep 5
+		Send, {%Skill1Key%}
+		Sleep 5
+		Send, {%UltimateKey%}
+		Sleep 5
+		Send, {%AttackKey%}
+		Sleep 5
+		Send, {%Skill2Key%}
+		Sleep 5
+		Send, {%Teammate2Key%}
+		Sleep 5
+		Send, {%Skill1Key%}
+		Sleep 5
+		Send, {%AttackKey%}
+		Sleep 5
+		Send, {%Skill2Key%}
+		Sleep 5
+	}
+	else
+	{
+		SetTimer, Press11, Off
+		ToolTip
+		11_Enable= false
+	}
+return
+
+;------------------------------------------------诗寇蒂自动战斗,Ctrl+小键盘2启动 ↓↓↓
+12_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Shikoudi:
+	{
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			12_Enable :=!12_Enable
+			if (12_Enable=false)
+			{
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				ToolTip, 诗寇蒂：启动, 74, 1021
+				gosub, Press12
+			}
+		}
+	}
+
+Press12:
+	loop
+	{
+		if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !12_Enable)
+		{
+			ToolTip
+			break  ; 退出循环
+		}
+		; 优先检测技能3
+		if (GetColor(1157, 683)=="0xFFFFFF" and GetColor(1173, 695)=="0xFFFFFF" and GetColor(770, 609)=="0xFFFFFF")
+		{
+		; 左线、右线神格, 化身槽满, 长按3
+      Send, {%Skill3Key% Down}
+      Sleep, 10000
+      Send, {%Skill3Key% Up}
+      Sleep, 10
+		}
+		else if (GetColor(1157, 683)=="0xFFFFFF" or GetColor(1166, 668)=="0xFFFFFF" or GetColor(1143, 677)=="0xFFFFFF")
+		{
+		; 化身槽不满, 图标有两种形态，一种是分割状态，一种是和中线一样, 所以同时检测两种图标有一种在就按3兼容三条神格
+      Send, {%Skill3Key%}
+      Sleep, 10
+		}
+		; 其次检测技能2
+		else if (GetColor(1097, 701)=="0xFFFFFF" and GetColor(1085, 700)=="0xFFFFFF")
+		{
+			Send, {%Skill2Key%}
+			Sleep, 10
+		}
+		else {
+			Send, {%AttackKey%}
+			Sleep, 10
+		}
+		Send, {%UltimateKey%}
+		Sleep, 10
+		Send, {%Teammate1Key%}
+		Sleep, 10
+		Send, {%Teammate2Key%}
+		Sleep, 10
+
+	}
+
+;------------------------------------------------樱切（左线）自动战斗,Ctrl+小键盘3启动 ↓↓↓
+13_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Fengqianfangtiangou:	
+  {
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+		{
+			13_Enable :=!13_Enable
+			if (13_Enable=false)
+			{
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				ToolTip, 樱切（左线）：启动, 74, 1021
+				gosub, Press13
+			}
+		}
+	}
 
 Press13:
 	loop
@@ -1629,10 +1053,10 @@ Press13:
 		if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !13_Enable)
 		{
 			ToolTip
-			break
+			break  ; 退出循环
 		}
-		; 检测1技能是否为樱弥状态
-		if (GetColor(1042, 682) == "0xFFFFFF")
+		; 检测1技能是否为樱弥状态，如果是，按3次1技能，然后按3次普攻,按3次2技能，然后按3次普攻,最后按3技能，退出樱弥状态
+		if (GetColor(1042, 682)=="0xFFFFFF")
 		{
 			Send, {%Skill1Key%}
 			Sleep, 500
@@ -1644,8 +1068,8 @@ Press13:
 			Sleep, 500
 			Send, {%AttackKey%}
 			Sleep, 500
-			Send, {%AttackKey%}
-			Sleep, 500
+			Send, {%AttackKey%}	
+      Sleep, 500
 			Send, {%Skill2Key%}
 			Sleep, 500
 			Send, {%Skill2Key%}
@@ -1656,12 +1080,12 @@ Press13:
 			Sleep, 500
 			Send, {%AttackKey%}
 			Sleep, 500
-			Send, {%AttackKey%}
-			Sleep, 500
-			Send, {%Skill3Key%}
+			Send, {%AttackKey%}	
+      Sleep, 500
+      Send, {%Skill3Key%}
 		}
-		; 常规出招
-		if (GetColor(1042, 682) != "0xFFFFFF" and GetColor(1154, 699) != "0xFFFFFF")
+		; 检测是否在樱弥状态，如果不是，常规出招
+    if (GetColor(1042, 682)!="0xFFFFFF" and GetColor(1154, 699)!="0xFFFFFF")
 		{
 			Send, {%Skill1Key%}
 			Sleep, 10
@@ -1679,68 +1103,115 @@ Press13:
 			Sleep, 10
 			Send, {%AttackKey%}
 		}
+		
 	}
-return
-
-; 亚莉莎（左线）自动战斗
-; ============================================================================
-
-Yalisha:
-{
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		14_Enable := !14_Enable
-		if (14_Enable = false)
+;---------------------------------------------亚莉莎自动战斗,Ctrl+小键盘4启动 ↓↓↓
+14_Enable= false
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+Yalisha:  
+  {
+		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
 		{
-			ToolTip
-		}
-		else
-		{
-			Sleep 100
-			if (ShowTooltip)
-				ToolTip, 亚莉莎（左线）：启动, %TooltipX%, %TooltipY%
-			gosub, Press14
+			14_Enable :=!14_Enable
+			if (14_Enable=false)
+			{
+				ToolTip
+			}
+			else
+			{
+				Sleep 100
+				ToolTip, 亚莉莎（左线）：启动, 74, 1021
+				gosub, Press14
+			}
 		}
 	}
-}
 
 Press14:
-	loop
-	{
-		if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !14_Enable)
-		{
-			ToolTip
-			break
-		}
-		; 检测是否处于枪械模式
-		if (GetColor(1145, 672) != "0xFFFFFF")
-		{
-			Send, {%UpKey% Down}
-			Send, {%DodgeKey% Down}
-			Sleep, 500
-			Send, {%DodgeKey% Up}
-			Send, {%UpKey% Up}
-		}
-		; 否则，开枪
-		else
-		{
-			Send, {%AttackKey%}
-			Sleep, 10
-			Send, {%UltimateKey%}
+  loop
+  {
+    if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !14_Enable)
+    {
+      ToolTip
+      break  ; 退出循环
+    }
+    ; 检测是否处于枪械模式，如果否，按前进+闪避长按进入枪械模式
+    if (GetColor(1145, 672)!="0xFFFFFF" )
+    {
+      Send, {%UpKey% Down}
+      Send, {%DodgeKey% Down}
+      Sleep, 500
+      Send, {%DodgeKey% Up}
+      Send, {%UpKey% Up}
+    }
+    ; 否则，开枪
+    else
+    {
+      Send, {%AttackKey%}
+      Sleep, 10
+      Send, {%UltimateKey%}
 			Sleep, 10
 			Send, {%AttackKey%}
 			Sleep, 10
 			Send, {%Teammate1Key%}
 			Sleep, 10
 			Send, {%Teammate2Key%}
-		}
-	}
+    }
+  }
+;------------------------------------------------强制停止脚本，小键盘0↓↓↓
+Stopscript:
+	Reload
+	1_Enable= False
+	2_Enable= False
+	3_Enable= False
+	4_Enable= False
+	5_Enable= False
+	6_Enable= False
+	7_Enable= False
+	9_Enable= False
+	11_Enable= False
+	12_Enable= False
+	13_Enable= False
+  14_Enable= False
+return
+;------------------------------------------------退出脚本↓↓↓
+ExitScript:
+    ExitApp
 return
 
-; ============================================================================
-; 第十七部分：FindText 图像识别功能
-; 用于多维变量自动刷分，这是第三方库，保持其原有结构
-; ============================================================================
+
+
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 FindText(ByRef x:="FindTextClass", ByRef y:="", args*)
 {
   static init, obj
@@ -5794,99 +5265,3 @@ Script_End() {
 }
 
 }
-
-; ============================================================================
-; 第十八部分：主程序初始化和热键设置
-; ============================================================================
-
-; 加载配置
-LoadConfig()
-
-; 加载统计数据
-LoadStatistics()
-
-; 显示浮动控制面板
-ShowFloatGUI()
-
-; 设置热键
-Hotkey, %JinwuKey%, Jinwu
-Hotkey, %DimensionKey%, Dimension
-Hotkey, %LingguangKey%, Lingguang
-Hotkey, %TuoteKey%, Tuote
-Hotkey, %NameiKey%, Namei
-Hotkey, %WeierKey%, Weier
-Hotkey, %KaorouKey%, Kaorou
-Hotkey, %LiandianKey%, Liandian
-Hotkey, %FantianKey%, Fantian
-Hotkey, %ShikoudiKey%, Shikoudi
-Hotkey, %FengqianfangtiangouKey%, Fengqianfangtiangou
-Hotkey, %YalishaKey%, Yalisha
-Hotkey, %StopscriptKey%, Stopscript
-
-; 托盘菜单
-Menu, Tray, NoStandard
-Menu, Tray, Add, 显示控制面板, ShowFloatPanelLabel
-Menu, Tray, Add, 打开设置, ShowSettingsGUILabel
-Menu, Tray, Add, 查看统计, ShowStatisticsLabel
-Menu, Tray, Add
-Menu, Tray, Add, 退出程序, ExitScript
-Menu, Tray, Default, 显示控制面板
-Menu, Tray, Tip, 深空之眼自动脚本
-
-; 游戏激活时有效的设置
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-SysGet, VirtualWidth, 16
-SysGet, VirtualHeight, 17
-CoordMode, ToolTip, Screen
-return
-
-; 停止脚本函数
-Stopscript:
-Reload
-1_Enable := False
-2_Enable := False
-3_Enable := False
-4_Enable := False
-5_Enable := False
-6_Enable := False
-7_Enable := False
-9_Enable := False
-11_Enable := False
-12_Enable := False
-13_Enable := False
-14_Enable := False
-return
-
-; 退出脚本
-ExitScript:
-ExitApp
-return
-
-; 托盘菜单标签
-ShowFloatPanelLabel:
-ShowFloatPanel()
-return
-
-ShowSettingsGUILabel:
-ShowSettingsGUI()
-return
-
-ShowStatisticsLabel:
-ShowStatistics()
-return
-
-; GUI 关闭事件（向后兼容旧的 GUI）
-GuiClose:
-GuiEscape:
-Gui, Destroy
-return
-
-ButtonOK:
-Gui, Submit
-SaveConfig()
-UpdateHotkeys()
-return
-
-; ============================================================================
-; 脚本结束
-; ============================================================================
