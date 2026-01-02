@@ -39,6 +39,7 @@ if !A_IsAdmin
 #Include %A_ScriptDir%\lib\Config.ahk
 #Include %A_ScriptDir%\lib\Statistics.ahk
 #Include %A_ScriptDir%\lib\SettingsGUI.ahk
+#Include %A_ScriptDir%\lib\FloatGUI.ahk
 
 ; ============================================================================
 ; 初始化
@@ -50,6 +51,9 @@ LoadConfig()
 
 ; 加载统计数据
 LoadStatistics()
+
+; 显示浮动控制面板
+ShowFloatGUI()
 
 ; ============================================================================
 ; 设置热键
@@ -72,11 +76,12 @@ Hotkey, %StopscriptKey%, Stopscript
 ; 托盘菜单
 ; ============================================================================
 Menu, Tray, NoStandard
+Menu, Tray, Add, 显示控制面板, ShowFloatPanelLabel
 Menu, Tray, Add, 打开设置, ShowSettingsGUILabel
 Menu, Tray, Add, 查看统计, ShowStatisticsLabel
 Menu, Tray, Add
 Menu, Tray, Add, 退出程序, ExitScript
-Menu, Tray, Default, 打开设置
+Menu, Tray, Default, 显示控制面板
 Menu, Tray, Tip, 深空之眼自动脚本
 
 ; ============================================================================
@@ -117,6 +122,10 @@ return
 ; ============================================================================
 ; 托盘菜单标签
 ; ============================================================================
+ShowFloatPanelLabel:
+	ShowFloatPanel()
+return
+
 ShowSettingsGUILabel:
 	ShowSettingsGUI()
 return
