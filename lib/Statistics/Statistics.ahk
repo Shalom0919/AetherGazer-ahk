@@ -102,4 +102,3 @@ ShowStatistics()
 StatsGuiClose:
 StatsGuiEscape:
 	Gui, StatsGui:Destroy
-return

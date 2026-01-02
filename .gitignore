@@ -4,3 +4,6 @@ settings_backup_*.ini
 AetherGazerMain_Old.ahk
 *.exe
 *.bak
+settings.ini
+start.bat
+Convert.ps1
