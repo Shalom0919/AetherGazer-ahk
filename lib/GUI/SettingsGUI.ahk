@@ -1,4 +1,4 @@
-﻿; ----------------------------------------------------------------------------
+; ----------------------------------------------------------------------------
 ; 增强的 GUI 设置界面模块
 ; 包含 6 个标签页：通用设置、游戏按键、脚本快捷键、多维变量、统计信息、关于
 ; ----------------------------------------------------------------------------
@@ -173,7 +173,7 @@ ShowSettingsGUI()
 	Gui, SettingsGui:Font, s11 Bold
 	Gui, SettingsGui:Add, Text, x20 y50, 深空之眼 AHK 自动脚本
 	Gui, SettingsGui:Font, s9 Norm
-	Gui, SettingsGui:Add, Text, x20 y80, 版本：3.1（模块化增强版）
+	Gui, SettingsGui:Add, Text, x20 y80, 版本：4.0（模块化架构版）
 	
 	Gui, SettingsGui:Add, GroupBox, x20 y110 w540 h100, 原作者信息
 	Gui, SettingsGui:Add, Text, x30 y130, 作者：qstdnx
@@ -182,7 +182,7 @@ ShowSettingsGUI()
 	
 	Gui, SettingsGui:Add, GroupBox, x20 y220 w540 h120, 免责声明
 	Gui, SettingsGui:Font, s8
-	Gui, SettingsGui:Add, Text, x30 y240 w520, 这是 AHK 按键脚本，而不是外挂，没有注入和修改数据，只是模拟键盘鼠标。目前脚本发布至今没有因使用脚本被封号的案例，但仍有风险，勇士对按键脚本的态度可能改变，所以如果造成封号或其他问题，本工具作者不承担任何责任。
+	Gui, SettingsGui:Add, Text, x30 y240 w520, 这是 AHK 按键脚本，而不是外挂，没有注入和修改数据，只是模拟键盘鼠标。目前脚本发布至今没有因使用脚本被封号的案例，但不排除以后会出现，请谨慎使用。
 	
 	Gui, SettingsGui:Font, s9 Norm
 	Gui, SettingsGui:Tab
@@ -207,7 +207,7 @@ SaveSettingsBtn:
 	; 保存所有设置到全局变量
 	SaveConfig()
 	
-	; 重新设置热键
+	; 重新设置热键 (调用 HotkeyManager.ahk 中的函数)
 	UpdateHotkeys()
 	
 	Gui, SettingsGui:Destroy
@@ -234,40 +234,3 @@ ResetStatisticsBtn:
 	ResetStatistics()
 	Gui, SettingsGui:Destroy
 return
-
-; 更新热键函数
-UpdateHotkeys()
-{
-	global
-	
-	; 禁用旧热键
-	Try Hotkey, %JinwuKey%, Off
-	Try Hotkey, %DimensionKey%, Off
-	Try Hotkey, %LingguangKey%, Off
-	Try Hotkey, %TuoteKey%, Off
-	Try Hotkey, %NameiKey%, Off
-	Try Hotkey, %WeierKey%, Off
-	Try Hotkey, %KaorouKey%, Off
-	Try Hotkey, %LiandianKey%, Off
-	Try Hotkey, %FantianKey%, Off
-	Try Hotkey, %ShikoudiKey%, Off
-	Try Hotkey, %FengqianfangtiangouKey%, Off
-	Try Hotkey, %YalishaKey%, Off
-	Try Hotkey, %StopscriptKey%, Off
-	
-	; 重新读取全局变量（从 Submit 获得的值）
-	; 设置新热键
-	Hotkey, %JinwuKey%, Jinwu
-	Hotkey, %DimensionKey%, Dimension
-	Hotkey, %LingguangKey%, Lingguang
-	Hotkey, %TuoteKey%, Tuote
-	Hotkey, %NameiKey%, Namei
-	Hotkey, %WeierKey%, Weier
-	Hotkey, %KaorouKey%, Kaorou
-	Hotkey, %LiandianKey%, Liandian
-	Hotkey, %FantianKey%, Fantian
-	Hotkey, %ShikoudiKey%, Shikoudi
-	Hotkey, %FengqianfangtiangouKey%, Fengqianfangtiangou
-	Hotkey, %YalishaKey%, Yalisha
-	Hotkey, %StopscriptKey%, Stopscript
-}
