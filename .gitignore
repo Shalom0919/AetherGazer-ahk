@@ -1,3 +1,6 @@
 *.backup
 settings_backup_*.ini
 *.tmp
+AetherGazerMain_Old.ahk
+*.exe
+*.bak
