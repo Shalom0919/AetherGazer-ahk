@@ -143,22 +143,6 @@ Gui, Submit
 SaveConfig()
 return
 
-ExportConfigBtn:
-ExportConfig()
-return
-
-ImportConfigBtn:
-ImportConfig()
-return
-
-BackupConfigBtn:
-BackupConfig()
-return
-
-RestoreConfigBtn:
-RestoreDefaultConfig()
-return
-
 ; ============================================================================
 ; 退出脚本 (Exit Script)
 ; ============================================================================
