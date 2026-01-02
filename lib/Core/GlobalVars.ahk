@@ -1,6 +1,7 @@
 ; ----------------------------------------------------------------------------
 ; 全局变量定义模块
 ; Global Variables Definition Module
+; AHK v1.1 兼容版本
 ; ----------------------------------------------------------------------------
 
 ; 战斗脚本状态标志 (Combat Script Status Flags)
@@ -23,43 +24,37 @@ global Inputkey := ""
 global WhichButton := ""
 global interval := 50
 
-; 战斗标志对象 (Combat Flags Object)
-; 提供统一的状态管理接口 (Provides unified status management interface)
-class CombatFlags
+; 当前运行的脚本名称
+global CurrentCombatScript := ""
+
+; ============================================================================
+; 战斗标志管理函数 (Combat Flag Management Functions)
+; 使用函数代替类，确保 AHK v1.1 兼容
+; ============================================================================
+
+; 获取指定ID的战斗标志状态 (Get combat flag status by ID)
+GetCombatFlag(id)
 {
-    ; 获取指定ID的战斗标志状态 (Get combat flag status by ID)
-    static Get(id)
-    {
-        return %id%_Enable
-    }
-    
-    ; 设置指定ID的战斗标志状态 (Set combat flag status by ID)
-    static Set(id, value)
-    {
-        %id%_Enable := value
-    }
-    
-    ; 切换指定ID的战斗标志状态 (Toggle combat flag status by ID)
-    static Toggle(id)
-    {
-        %id%_Enable := !%id%_Enable
-        return %id%_Enable
-    }
-    
-    ; 获取所有启用的战斗标志 (Get all enabled combat flags)
-    static GetAllEnabled()
-    {
-        enabled := []
-        Loop, 14
-        {
-            id := A_Index
-            if (id = 8 || id = 10)  ; 跳过未使用的ID (Skip unused IDs)
-                continue
-            if (%id%_Enable)
-                enabled.Push(id)
-        }
-        return enabled
-    }
+    global
+    varName := id . "_Enable"
+    return %varName%
+}
+
+; 设置指定ID的战斗标志状态 (Set combat flag status by ID)
+SetCombatFlag(id, value)
+{
+    global
+    varName := id . "_Enable"
+    %varName% := value
+}
+
+; 切换指定ID的战斗标志状态 (Toggle combat flag status by ID)
+ToggleCombatFlag(id)
+{
+    global
+    varName := id . "_Enable"
+    %varName% := !%varName%
+    return %varName%
 }
 
 ; 重置所有战斗标志 (Reset All Combat Flags)
@@ -79,6 +74,7 @@ ResetAllCombatFlags()
     13_Enable := false
     14_Enable := false
     Inputkey := ""
+    CurrentCombatScript := ""
 }
 
 ; 检查游戏是否激活 (Check if Game is Active)
