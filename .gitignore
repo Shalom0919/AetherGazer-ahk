@@ -1,0 +1,3 @@
+*.backup
+settings_backup_*.ini
+*.tmp

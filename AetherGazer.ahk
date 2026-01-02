@@ -1,109 +1,68 @@
 ; ----------------------------------------------------------------------------
 ; Script Name: 深空之眼
-; Version: 3.1
+; Version: 3.1 (模块化增强版)
 ; Author: qstdnx
 ; Contact: https://github.com/qstdnx/AetherGazer-ahk/issues
+; Fork: Modularized by Shalom0919
 ; ----------------------------------------------------------------------------
-#Persistent             ;~让脚本持久运行
-#SingleInstance,Force   ;~运行替换旧实例
-ListLines,Off           ;~不显示最近执行的脚本行
-SetBatchLines,-1        ;~脚本全速执行(默认10ms)
-CoordMode,Menu,Window   ;~坐标相对活动窗口
-;------------------------------------------------获取管理员权限 ↓↓↓
-if !A_IsAdmin  ; 如果不是管理员权限
+
+#Persistent             ; 让脚本持久运行
+#SingleInstance, Force  ; 运行替换旧实例
+ListLines, Off          ; 不显示最近执行的脚本行
+SetBatchLines, -1       ; 脚本全速执行(默认10ms)
+CoordMode, Menu, Window ; 坐标相对活动窗口
+
+; ============================================================================
+; 获取管理员权限
+; ============================================================================
+if !A_IsAdmin
 {
-	try  ; 尝试以管理员身份重新启动脚本
+	try
 	{
-		if A_IsCompiled  ; 如果是编译后的 .exe
+		if A_IsCompiled
 			Run *RunAs "%A_ScriptFullPath%" %1% %2% %3% %4% %5% %6% %7% %8% %9%
-		else  ; 如果是 .ahk 脚本
+		else
 			Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%" %1% %2% %3% %4% %5% %6% %7% %8% %9%
-		ExitApp  ; 退出当前非管理员实例
+		ExitApp
 	}
-	catch  ; 如果用户拒绝了 UAC 弹窗
+	catch
 	{
 		MsgBox "管理员权限请求被拒绝，3.5版本后深空之眼需要使用管理员权限运行脚本"
 		ExitApp
 	}
 }
 
-;------------------------------------------------设置 ↓↓↓
-; 初始化快捷键
-global UPKey := "w"
-global DOWNKey := "s"
-global LEFTKey := "a"
-global RIGHTKey := "d"
-global AttackKey := "j"
-global Skill1Key := "u"
-global Skill2Key := "i"
-global Skill3Key := "o"
-global DodgeKey := "Space"
-global UltimateKey := "r"
-global Teammate1Key := "1"
-global Teammate2Key := "2"
-global JinwuKey := "Numpad1"
-global DimensionKey := "Numpad2"
-global LingguangKey := "Numpad3"
-global TuoteKey := "Numpad4"
-global NameiKey := "Numpad5"
-global WeierKey := "Numpad6"
-global KaorouKey := "Numpad7"
-global LiandianKey := "Numpad9"
-global FantianKey := "^Numpad1"
-global ShikoudiKey := "^Numpad2"
-global FengqianfangtiangouKey := "^Numpad3"
-global YalishaKey := "^Numpad4"
-global StopscriptKey := "Numpad0"
+; ============================================================================
+; 加载模块
+; ============================================================================
+#Include %A_ScriptDir%\lib\Utils.ahk
+#Include %A_ScriptDir%\lib\Config.ahk
+#Include %A_ScriptDir%\lib\Statistics.ahk
+#Include %A_ScriptDir%\lib\SettingsGUI.ahk
+#Include %A_ScriptDir%\lib\Combat\Jinwu.ahk
+#Include %A_ScriptDir%\lib\Combat\Lingguang.ahk
+#Include %A_ScriptDir%\lib\Combat\Tuote.ahk
+#Include %A_ScriptDir%\lib\Combat\Namei.ahk
+#Include %A_ScriptDir%\lib\Combat\Weier.ahk
+#Include %A_ScriptDir%\lib\Combat\Fantian.ahk
+#Include %A_ScriptDir%\lib\Combat\Shikoudi.ahk
+#Include %A_ScriptDir%\lib\Combat\Dimension.ahk
+#Include %A_ScriptDir%\lib\Combat\Others.ahk
+
+; ============================================================================
+; 初始化
+; ============================================================================
 global ScriptDir := A_ScriptDir
-IniFilePath := ScriptDir . "\settings.ini"
 
-; 定义所有需要检查的键值对
-KeyMappings := { "UpKey": UPKey
-  , "DownKey": DOWNKey
-	, "LeftKey": LEFTKey
-	, "RightKey": RIGHTKey
-  , "AttackKey": AttackKey
-	, "Skill1Key": Skill1Key
-	, "Skill2Key": Skill2Key
-	, "Skill3Key": Skill3Key
-	, "DodgeKey": DodgeKey
-	, "UltimateKey": UltimateKey
-	, "Teammate1Key": Teammate1Key
-	, "Teammate2Key": Teammate2Key
-	, "JinwuKey": JinwuKey
-	, "DimensionKey": DimensionKey
-	, "LingguangKey": LingguangKey
-	, "TuoteKey": TuoteKey
-	, "NameiKey": NameiKey
-	, "WeierKey": WeierKey
-	, "KaorouKey": KaorouKey
-	, "LiandianKey": LiandianKey
-	, "FantianKey": FantianKey
-	, "ShikoudiKey": ShikoudiKey
-	, "FengqianfangtiangouKey": FengqianfangtiangouKey
-  , "YalishaKey": YalishaKey
-	, "StopscriptKey": StopscriptKey }
+; 加载配置
+LoadConfig()
 
-; 检查INI文件是否存在，不存在则创建
-if !FileExist(IniFilePath) {
-	; 创建新的INI文件并写入所有默认值
-	for key, value in KeyMappings {
-		IniWrite, %value%, %IniFilePath%, Hotkeys, %key%
-}
-} else {
-	; 检查INI文件中是否有缺失的键，有则补充
-	for key, defaultValue in KeyMappings {
-		IniRead, ReadValue, %IniFilePath%, Hotkeys, %key%
-	if (ReadValue = "ERROR") {
-		IniWrite, %defaultValue%, %IniFilePath%, Hotkeys, %key%
-		ReadValue := defaultValue
-	}
-	; 更新全局变量
-	%key% := ReadValue
-}
-}
+; 加载统计数据
+LoadStatistics()
 
+; ============================================================================
 ; 设置热键
+; ============================================================================
 Hotkey, %JinwuKey%, Jinwu
 Hotkey, %DimensionKey%, Dimension
 Hotkey, %LingguangKey%, Lingguang
@@ -118,72 +77,52 @@ Hotkey, %FengqianfangtiangouKey%, Fengqianfangtiangou
 Hotkey, %YalishaKey%, Yalisha
 Hotkey, %StopscriptKey%, Stopscript
 
+; ============================================================================
+; 托盘菜单
+; ============================================================================
 Menu, Tray, NoStandard
-Menu, Tray, Add, 快捷键设置, ShowSettingsGui
+Menu, Tray, Add, 打开设置, ShowSettingsGUI
+Menu, Tray, Add, 查看统计, ShowStatistics
+Menu, Tray, Add
 Menu, Tray, Add, 退出程序, ExitScript
-ShowSettingsGUI() {
-	global
-	Gui, New
-  Gui, Add, Tab3,,按键设置|自动操作
-  GUI, Tab, 按键设置
-  Gui, Add, Text,, 设置与你游戏内按键对应
-  Gui, Add, Text,, 移动（前）
-  Gui, Add, Hotkey, vUpKey, %UpKey%
-  Gui, Add, Text,, 移动（后）
-  Gui, Add, Hotkey, vDownKey, %DownKey%
-  Gui, Add, Text,, 移动（左）
-  Gui, Add, Hotkey, vLeftKey, %LeftKey%
-  Gui, Add, Text,, 移动（右）
-  Gui, Add, Hotkey, vRightKey, %RightKey%
-	Gui, Add, Text,, 普攻
-	Gui, Add, Hotkey, vAttackKey, %AttackKey%
-	Gui, Add, Text,, 1 技能
-	Gui, Add, Hotkey, vSkill1Key, %Skill1Key%
-	Gui, Add, Text,, 2 技能
-	Gui, Add, Hotkey, vSkill2Key, %Skill2Key%
-	Gui, Add, Text,, 3 技能
-	Gui, Add, Hotkey, vSkill3Key, %Skill3Key%
-	Gui, Add, Text,, 闪避
-	Gui, Add, Hotkey, vDodgeKey, %DodgeKey%
-	Gui, Add, Text,, 奥义
-	Gui, Add, Hotkey, vUltimateKey, %UltimateKey%
-	Gui, Add, Text,, 队友1 奥义
-	Gui, Add, Hotkey, vTeammate1Key, %Teammate1Key%
-	Gui, Add, Text,, 队友2 奥义
-	Gui, Add, Hotkey, vTeammate2Key, %Teammate2Key%
-  Gui, tab, 自动操作
-	Gui, Add, Text,, 金乌
-	Gui, Add, Hotkey, vJinwuKey, %JinwuKey%
-	Gui, Add, Text,, 自动多维变量
-	Gui, Add, Hotkey, vDimensionKey, %DimensionKey%
-	Gui, Add, Text,, 陵光
-	Gui, Add, Hotkey, vLingguangKey, %LingguangKey%
-	Gui, Add, Text,, 托特/哈迪斯/雷前鬼/水姆
-	Gui, Add, Hotkey, vTuoteKey, %TuoteKey%
-	Gui, Add, Text,, 娜美
-	Gui, Add, Hotkey, vNameiKey, %NameiKey%
-	Gui, Add, Text,, 薇儿/光赫拉/瓦吉特/执明
-	Gui, Add, Hotkey, vWeierKey, %WeierKey%
-	Gui, Add, Text,, 自动烤肉
-	Gui, Add, Hotkey, vKaorouKey, %KaorouKey%
-	Gui, Add, Text,, 简易连点器
-	Gui, Add, Hotkey, vLiandianKey, %LiandianKey%
-	Gui, Add, Text,, 梵天
-	Gui, Add, Hotkey, vFantianKey, %FantianKey%
-	Gui, Add, Text,, 诗寇蒂
-	Gui, Add, Hotkey, vShikoudiKey, %ShikoudiKey%
-	Gui, Add, Text,, 樱切（左线）
-	Gui, Add, Hotkey, vFengqianfangtiangouKey, %FengqianfangtiangouKey%
-  Gui, Add, Text,, 亚莉莎（左线）
-	Gui, Add, Hotkey, vYalishaKey, %YalishaKey%
-	Gui, Add, Text,, 停止脚本
-	Gui, Add, Hotkey, vStopscriptKey, %StopscriptKey%
-  Gui, Tab
-	Gui, Add, Button, default, OK
-	Gui, Show, , 设置快捷键
-	return
-}
 
+; ============================================================================
+; 游戏激活时有效的设置
+; ============================================================================
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
+SysGet, VirtualWidth, 16
+SysGet, VirtualHeight, 17
+CoordMode, ToolTip, Screen
+
+; ============================================================================
+; 停止脚本函数
+; ============================================================================
+Stopscript:
+	Reload
+	1_Enable := False
+	2_Enable := False
+	3_Enable := False
+	4_Enable := False
+	5_Enable := False
+	6_Enable := False
+	7_Enable := False
+	9_Enable := False
+	11_Enable := False
+	12_Enable := False
+	13_Enable := False
+	14_Enable := False
+return
+
+; ============================================================================
+; 退出脚本
+; ============================================================================
+ExitScript:
+	ExitApp
+return
+
+; ============================================================================
+; GUI 关闭事件（向后兼容旧的 GUI）
+; ============================================================================
 GuiClose:
 GuiEscape:
 	Gui, Destroy
@@ -191,1027 +130,14 @@ return
 
 ButtonOK:
 	Gui, Submit
-	FileDelete, %IniFilePath%
-	for key, value in KeyMappings {
-		IniWrite, % %key%, %IniFilePath%, Hotkeys, %key%
-	}
-
-	; 更新全局变量
-	for key in KeyMappings {
-		%key% := %key%
-	}
-
-	; 重新设置热键
-	Hotkey, %JinwuKey%, Jinwu
-	Hotkey, %DimensionKey%, Dimension
-	Hotkey, %LingguangKey%, Lingguang
-	Hotkey, %TuoteKey%, Tuote
-	Hotkey, %NameiKey%, Namei
-	Hotkey, %WeierKey%, Weier
-	Hotkey, %KaorouKey%, Kaorou
-	Hotkey, %LiandianKey%, Liandian
-	Hotkey, %FantianKey%, Fantian
-	Hotkey, %ShikoudiKey%, Shikoudi
-	Hotkey, %FengqianfangtiangouKey%, Fengqianfangtiangou
-  Hotkey, %YalishaKey%, Yalisha
-  Hotkey, %StopscriptKey%, Stopscript
-
+	SaveConfig()
+	UpdateHotkeys()
 return
 
-;------------------------------------------------深空之眼下才有效果 ↓↓↓
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-SysGet, VirtualWidth, 16
-SysGet, VirtualHeight, 17
-CoordMode, ToolTip, Screen
-;-------------------------------------------------定义变量 ↓↓↓
-GetColor(x,y)
-{
-	PixelGetColor, color, x, y,  RGB
-	StringRight color,color,10 ;
-	return color
-}
-;这个游戏指针会干扰window spy取色，建议换截图工具取色。
-;------------------------------------------------金乌飞天,小键盘1启动 ↓↓↓
-
-1_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Jinwu:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			1_Enable :=!1_Enable
-			if (1_Enable=false)
-			{
-				SetTimer, Press1, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				SetTimer, Press1, 10  ;
-				ToolTip, 金乌：启动, 74, 1021
-			}
-		}
-	}
-
-Press1:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		loop{
-			if (GetColor(1161, 692)=="0xFFFFFF")
-			{
-				Send, {%Skill3Key%}
-				Sleep 10
-				Send, {%Skill3Key%}
-			}
-			else
-			{
-				break
-			}
-		}
-		Send, {%Skill1Key%}
-		Sleep 10
-		Send, {%Skill1Key%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Skill2Key%}
-		Sleep 10
-		Send, {%UltimateKey%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Teammate1Key%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Teammate2Key%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-	}
-	else
-	{
-		SetTimer, Press1, Off
-		ToolTip
-		1_Enable= false
-	}
-return
-
-;------------------------------------------------自动多维变量,要求分辨率1280x720, 小键盘2启动 ↓↓↓
-2_Enable=false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Dimension:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			2_Enable := !2_Enable
-			if (2_Enable=false)
-			{
-				SetTimer, Press2, Off
-				ToolTip
-			}
-			else
-			{
-				ToolTip, 多维变量：启动, 74, 1021 ; 设置ToolTip的显示内容和位置坐标
-				Sleep 100
-				Press2()
-			}
-		}
-	}
-Press2()
-{
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-#NoEnv
-		SetWorkingDir %A_ScriptDir%
-		CoordMode, Mouse, Window
-		SendMode Input
-		SetTitleMatchMode 2
-#WinActivateForce
-		SetControlDelay 1
-		SetWinDelay 0
-		SetKeyDelay -1
-		SetMouseDelay -1
-		loop
-		{
-			;点击开始挑战
-			Text:="|<>*204$83.zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzjzzzzzwzz003sz7yD8znt7y007lwTwSFzbm7w00DXsbsYWT1aDz7lw1X7010y1CTyDXs36C121w20TwT7sYED647tk0TsyDl00SC8DnU3y003W00QCFzXVbs007AzzsMVw1XDk00CF03011s3YTyDXwW06221l71zwT7sA0D44HbC7zsyDsMwSC8zCQBzXwTkFswQFiQ0ly7szU3lslXAs0XsTly803l30M0EDlzXsO060D0k7kTrzDtwSCAy3zzlzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
-      ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
-      if (ok:=FindText(X, Y, 1075-150000, 770-150000, 1075+150000, 770+150000, 0, 0, Text))
-      {
-        FindText().Click(X, Y, "L")
-      }
-			;难度选择
-			Sleep, 500
-			Click, 562, 674 Left, Down
-			Sleep, 78
-			Click, 563, 659, 0
-			Click, 563, 650, 0
-			Sleep, 31
-			Click, 556, 549, 0
-			Click, 550, 507, 0
-			Click, 543, 447, 0
-			Sleep, 16
-			Click, 542, 430, 0
-			Click, 539, 395, 0
-			Sleep, 16
-			Click, 530, 128, 0
-			Sleep, 15
-			Click, 530, 89, 0
-			Click, 536, -7, 0
-			Sleep, 16
-			Click, 542, -63, 0
-			Click, 551, -120, 0
-			Sleep, 15
-			Click, 593, -169, 0
-			Sleep, 16
-			Click, 600, -169, 0
-			Click, 600, -169 Left, Up
-			Sleep, 812
-			Click, 391, 630
-			Sleep, 500
-			Click, 1060, 662
-			Sleep, 1000
-			;选择真红
-			Click, 71, 707
-			Sleep, 500
-			t1:=A_TickCount, Text:=X:=Y:=""
-			Text:="|<>*211$37.0000000000000301U03zzknztzzsNzw0s0zjy7zsTzz30Q7TzVzy3rjUzz1tnkTzVzjwDzkwYY7zsSzz3zwDTzbzzVXb7zzknr0CD0MTUz3sBzwQ0Q6w60000000000004"
-			if (ok:=FindText(X, Y, 163-150000, 267-150000, 163+150000, 267+150000, 0, 0, Text))
-			{
-				FindText().Click(X, Y, "L")
-			}
-			Sleep, 500
-			Text:="|<>*206$41.0000000000000032000006A00Ty0gM0zzw1MztxqM3zzkngkDyZVbzUPPP3Dz0q6qTNa1gBgyzw0SqMtzs3vgkkA0DaNVUQ03NX3Dz06767jy0AQMz300Mnlnzw0l7U3zs00000000000004"
-			if (ok:=FindText(X, Y, 162-150000, 416-150000, 162+150000, 416+150000, 0, 0, Text))
-			{
-				FindText().Click(X, Y, "L")
-			}
-			Sleep, 500
-			Click, 235, 702
-			Sleep, 500
-			Text:="|<>*117$71.0Dzzzzzzzza00jzzzzzzzzi00PzzzzzzzzA0MbzzzzzzzzM1kCzTzzzxzzk348gjzzzzzzUCE03DzzjzzzETU04Izzzzzy1zU0N3yzzzzw3y0Am5nzzzzt7zLng/zzzzzwTzzzTzzzzzyAzzzzzzzzzzwNTzzzzzzzzzvnzzzzzzzzzzmvzzzzzzzzzzpjzzzzzzzzzzbTzzzztzzzzzizzzzznzzzzzzzTzzzXzzvzzzzzzzy7zznzzzzzzzwDzzXzzzzzzzkDzz7zzTzzzvUTzy7zyzzzzq0zzwDzz"
-
-			if (ok:=FindText(X, Y, 161-150000, 436-150000, 161+150000, 436+150000, 0, 0, Text))
-			{
-				FindText().Click(X, Y, "L")
-			}
-			Sleep, 500
-			Click, 1173, 701
-			Sleep, 500
-			;选择信标
-			Click, 628, 562 Left, Down
-			Sleep, 125
-			Click, 628, 549, 0
-			Click, 628, 546, 0
-			Sleep, 16
-			Click, 628, 521, 0
-			Click, 628, 508, 0
-			Sleep, 16
-			Click, 628, 457, 0
-			Click, 628, 436, 0
-			Sleep, 15
-			Click, 628, 362, 0
-			Click, 628, 335, 0
-			Sleep, 16
-			Click, 626, 240, 0
-			Click, 626, 224, 0
-			Sleep, 15
-			Click, 619, -9, 0
-			Click, 618, -54, 0
-			Sleep, 16
-			Click, 618, -110, 0
-			Sleep, 16
-			Click, 618, -110 Left, Up
-			Sleep, 812
-			Click, 170, 492
-			Sleep, 500
-			Click, 483, 221
-			Sleep, 500
-			Click, 805, 221
-			Sleep, 500
-			Click, 1183, 702
-			Sleep, 500
-			;选珍宝
-			Text:=  "|<>*167$45.zzzzzzzzzzzzzzzzzrzzzzzzwTwzXzw10DXwTzU81wDXzyCADlwTzlU0zTXzyA07zwTzk00kTXzw28a3sTzUE0sT1zsG07XsDz2E0wT1zsG8bWl7zmE0w68zyG07U3Xzk3Aw0QDy0NbW7kzk30yFz7zws7yTxzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzw"
-			ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
-			if (ok:=FindText(X, Y, 886-150000, 742-150000, 886+150000, 742+150000, 0, 0, Text))
-			{
-				Click, 642, 400
-				Sleep, 500
-				FindText().Click(X, Y, "L")
-			}
-			Sleep, 500
-			Click, 864, 643
-			;选关卡
-			Sleep, 1687
-			Send, {w Down}
-			Sleep, 3300
-			Send, {d Down}
-			Sleep, 1200
-			Send, {d Up}
-			Sleep, 400
-			Send, {w Up}
-			Sleep, 1000
-			Click, 889, 490
-			Sleep, 500
-			;打完只有一个珍宝时，确认默认被选中时的图片
-			text1:="|<>*202$43.zzzzzzzzzzzzzzzzrzzzzzzlztyDz0M3sT7zU81yDXzwMEz3lzyM0DnszyA03zwTz001UyDz0W8kT3zUE0QDVzV80D7UzkYF7XkDwG8Xls7z901s8lzYU0w0MzkF4S4SDs1WD4T3w0k7YDlzws7zDwzzzzzzzzzzzzzzzzzzzzzzzzzzzzzk"
-
-			;打怪
-			loop
-			{
-				if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-					Send, {%Skill1Key%}
-				Sleep, 10
-				Send, {%Skill3Key%}
-				Sleep, 10
-				Send, {%AttackKey%}
-				Sleep, 10
-				Send, {%Skill2Key%}
-				Sleep, 10
-				Send, {%Skill3Key%}
-				Sleep, 10
-				Send, {%AttackKey%}
-				Sleep, 10
-				Send, {%UltimateKey%}
-				Sleep, 10
-				Send, {%Skill3Key%}
-				Sleep, 10
-				Send, {%AttackKey%}
-				Sleep, 10
-				if (ok:=FindText(X, Y, 886-150000, 742-150000, 886+150000, 742+150000, 0, 0, Text))
-				{
-					break
-				}
-				if (ok:=FindText(X, Y, 886-150000, 742-150000, 886+150000, 742+150000, 0, 0, Text1))
-				{
-					break
-				}
-			}
-      Click, 642, 400
-      Sleep, 500
-      Click, 745, 643
-			Sleep, 1000
-			;退出
-			Send, {Alt}
-			Sleep, 500
-			Click, 1229, 74
-			Sleep, 500
-			Click, 1000, 692
-			Sleep, 500
-			Send,   {Enter}
-			Text:="|<>*202$39.zzzzzzzzzzzzzvzzzwzyA0DzbzkU1wwsz0TDbb7wU1wwszw0Dbb7kXtw00w40DU07kU0w00z4F7zbzsW1swwT4ED7bXsUEswwT07b7bXk3ws00QE03003nU0s00Tzzzzzbzzzzzzw"
-			ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
-			if (ok:=FindText(X, Y, 1183-150000, 803-150000, 1183+150000, 803+150000, 0, 0, Text))
-			{
-				FindText().Click(X, Y, "L")
-			}
-			Sleep, 1000
-		}
-	}
-	else
-	{
-		SetTimer, Press2, Off
-		ToolTip
-		2_Enable=false
-	}
-}
-return
-;------------------------------------------------陵光自动操作，小键盘3启动 ↓↓↓
-3_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Lingguang:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			3_Enable :=!3_Enable
-			if (3_Enable=false)
-			{
-				SetTimer, Press3, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				SetTimer, Press3, 10  ;
-				ToolTip, 陵光：启动, 74, 1021
-			}
-		}
-	}
-
-Press3:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		Send, {%AttackKey%}
-		Sleep 250
-		Send, {%Skill1Key%}
-		Sleep 250
-		Send, {%UltimateKey%}
-		Send, {%Teammate1Key%}
-		Send, {%Teammate2Key%}
-	}
-	else
-	{
-		SetTimer, Press3, Off
-		ToolTip
-		1_Enable= false
-	}
-return
-
-;------------------------------------------------托特或哈迪斯自动战斗,小键盘4启动 ↓↓↓
-
-4_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Tuote:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			4_Enable :=!4_Enable
-			if (4_Enable=false)
-			{
-				SetTimer, Press4, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				SetTimer, Press4, 10  ;
-				ToolTip, 托特/哈迪斯/雷前鬼/水姆：启动, 74, 1021
-			}
-		}
-	}
-
-Press4:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		Send, {%AttackKey% Down}
-		Sleep, 500
-		Send, {%AttackKey% Up}
-		Send, {%Skill3Key%}
-		Sleep 10
-		Send, {%Skill3Key%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Skill1Key%}
-		Sleep 10
-		Send, {%Skill1Key%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Skill2Key%}
-		Sleep 10
-		Send, {%UltimateKey%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Teammate1Key%}
-		Sleep 10
-		Send, {%Teammate2Key%}
-		Sleep 10
-	}
-	else
-	{
-		SetTimer, Press4, Off
-		ToolTip
-		4_Enable= false
-	}
-return
-;------------------------------------------------娜美自动战斗,小键盘5启动 ↓↓↓
-5_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Namei:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			5_Enable :=!5_Enable
-			if (5_Enable=false)
-			{
-				SetTimer, Press5, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				Send, {%Skill1Key%}{%AttackKey%}
-				SetTimer, Press5, 10  ;
-				ToolTip, 娜美：启动, 74, 1021
-			}
-		}
-	}
-
-Press5:
-	if WinActive("ahk_exe AetherGazer.exe")
-	{
-		if (GetColor(1174, 684)=="0xFFFFFF")
-		{
-			Send, {%DodgeKey%}
-			Sleep 400
-			Send, {%AttackKey%}
-			Sleep 300
-			Send, {%AttackKey%}
-			Sleep 700
-			Send, {%AttackKey%}
-			Sleep 600
-			Send, {%Skill3Key%}
-			Sleep 1400
-			Send, {%Skill2Key%}{%Skill1Key%}
-		}
-		Sleep 10
-		Send, {%AttackKey%}
-		if (GetColor(1090, 672)=="0xFFFFFF")
-		{
-			Sleep 150
-			Send, {%Skill2Key%}
-		}
-		Sleep 10
-		Send, {%AttackKey%}
-		if (GetColor(1016, 697)=="0xFFFFFF")
-		{
-			Sleep 150
-			Send, {%Skill1Key%}
-		}
-		Send, {%UltimateKey%}
-		Sleep 10
-		Send, {%AttackKey%}
-		Sleep 10
-		Send, {%Teammate1Key%}
-		Sleep 10
-		Send, {%Teammate2Key%}
-		Sleep 10
-	}
-	else
-	{
-		SetTimer, Press5, Off
-		ToolTip
-		5_Enable= false
-	}
-return
-;------------------------------------------------光薇儿自动战斗,小键盘6启动 ↓↓↓
-6_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Weier:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			6_Enable :=!6_Enable
-			if (6_Enable=false)
-			{
-				SetTimer, Press6, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				SetTimer, Press6, 10  ;
-				ToolTip, 薇儿/光赫拉/瓦吉特/执明：启动, 74, 1021
-			}
-		}
-	}
-
-Press6:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		Send, {%Skill3Key%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill1Key%}
-		Sleep 5
-		Send, {%UltimateKey%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill2Key%}
-		Sleep 5
-		Send, {%Teammate1Key%}
-		Sleep 5
-		Send, {%Skill1Key%}
-		Sleep 5
-		Send, {%Teammate2Key%}
-		Sleep 5
-		Send, {%Skill2Key%}
-		Sleep 5
-	}
-	else
-	{
-		SetTimer, Press6, Off
-		ToolTip
-		6_Enable= false
-	}
-return
-;------------------------------------------------闲暇时刻自动烤肉，小键盘7启动↓↓↓
-7_Enable= false
-Kaorou:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			7_Enable := !7_Enable
-			if (7_Enable = false)
-			{
-				SetTimer, Press7, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				SetTimer, Press7, 10
-				ToolTip, 烤肉：启动, 74, 1021
-			}
-		}
-	}
-
-Press7:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		color := GetColor(691, 180)
-		if (IsColorClose(color, "0xde6566", 10))  ; 容差设为10
-		{
-			Send, i
-		}
-		if (IsColorClose(color, "0x4abbf1", 10))  ; 容差设为10
-		{
-			Send, u
-		}
-	}
-	else
-	{
-		SetTimer, Press7, Off
-		ToolTip
-		7_Enable = false
-	}
-return
-
-; 判断两个颜色值是否在容差范围内
-IsColorClose(color1, color2, tolerance)
-{
-	color1 := "0x" SubStr(color1, 3)
-	color2 := "0x" SubStr(color2, 3)
-
-	r1 := (color1 >> 16) & 0xFF
-	g1 := (color1 >> 8) & 0xFF
-	b1 := color1 & 0xFF
-
-	r2 := (color2 >> 16) & 0xFF
-	g2 := (color2 >> 8) & 0xFF
-	b2 := color2 & 0xFF
-
-	if (Abs(r1 - r2) <= tolerance && Abs(g1 - g2) <= tolerance && Abs(b1 - b2) <= tolerance)
-	{
-		return true
-	}
-	return false
-}
-;--------------------------简易连点器功能，右ctrl+任意键连点，小键盘9启动自定义连点↓↓↓
-9_Enable := false
-Inputkey := ""
-RControl::
-	Input, Inputkey, L1 I V, {MouseX, MouseY}
-	9_Enable := true
-	loop {
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe"){
-			if (9_Enable){
-				Send, %Inputkey%
-				Sleep, 50
-				ToolTip, %Inputkey% 键连点中，按%StopscriptKey%停止
-			}
-			if (!9_Enable or Inputkey=""){
-				ToolTip
-				break
-			}
-		} else {
-			9_Enable := false
-			ToolTip
-			break
-		}
-	}
-return
-
-;可记忆版本，容易卡键
-; keyToClick := ""
-; RControl::
-;     Input, Inputkey, L1 I V, {MouseX, MouseY}
-;     keyToClick := keyToClick . Inputkey
-;     9_Enable := true
-;     Loop {
-;         If WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe"){
-;         if (9_Enable){
-;             Send, %keyToClick%
-;             Sleep, 50
-;             Tooltip, %keyToClick% 键连点中，按%StopscriptKey%停止`n按右alt键暂停，再次点击右ctrl+任意键同时连点暂停前记录的按键
-;             }
-;             if (!9_Enable or keyToClick=""){
-;             Tooltip
-;             break
-;             }
-;         } else {
-;         9_Enable := false
-;         Tooltip
-;         break
-;         }
-;     }
-;     return
-
-;连点鼠标，导致rctrl失效
-; RControl & LButton::
-;     Loop {
-;     If WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe"){
-;         if (9_Enable)
-;         Click
-;         Sleep, 50
-;         ToolTip,鼠标左键连点中，`n间隔50毫秒，按%StopscriptKey%停止
-;         } else {
-;         9_Enable := false
-;         ToolTip
-;         break
-;         }
-;     }
-;     return
-
-; RAlt::
-;     9_Enable := false
-;     return
-
-Liandian:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-			gosub, 连点弹框输入
-		return
-	}
-连点弹框输入:
-	Gui, MouseClickGui: New
-	Gui, MouseClickGui: +AlwaysOnTop
-	Gui, MouseClickGui: Add, Text, , 填写连点的按键：`n同时连按多个按键直接填入即可，例如填入jkio为同时连点jkio四个按键`n特殊按键用{}圈住，例如鼠标左键为{LButton}，空格键为{Space}，左Shift为{LShift}
-	Gui, MouseClickGui: Add, Edit, w400 v连点按键, {LButton}
-	Gui, MouseClickGui: Add, Text, , 连点间隔（单位毫秒）：
-	Gui, MouseClickGui: Add, Edit, w400 v连点间隔, 50
-	Gui, MouseClickGui: Add, Button, default g连点确认, 确认
-	Gui, MouseClickGui: Show, , 按键连点
-return
-连点确认:
-	Gui, MouseClickGui: Submit
-	global WhichButton:= 连点按键
-	global interval:= 连点间隔
-	SetTimer, ContinuousClick, %连点间隔%
-return
-
-ContinuousClick:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		Send, %WhichButton%
-	ToolTip,%WhichButton%键连点中，`n间隔%interval%毫秒，按%StopscriptKey%停止
-return
-
-;------------------------------------------------梵天自动战斗,Ctrl+小键盘1启动 ↓↓↓
-11_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Fantian:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			11_Enable :=!11_Enable
-			if (11_Enable=false)
-			{
-				SetTimer, Press11, Off
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				SetTimer, Press11, 10  ;
-				ToolTip, 梵天：启动, 74, 1021
-			}
-		}
-	}
-
-Press11:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		if (GetColor(1218, 681)=="0xFFFFFF" and GetColor(910, 683)!=="0xFFFFFF")
-		{
-			Send, {%DodgeKey% Down}
-			Sleep, 500
-			Send, {%DodgeKey% Up}
-		}
-		Send, {%Skill3Key%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill1Key%}
-		Sleep 5
-		Send, {%UltimateKey%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill2Key%}
-		Sleep 5
-		Send, {%Teammate2Key%}
-		Sleep 5
-		Send, {%Skill1Key%}
-		Sleep 5
-		Send, {%AttackKey%}
-		Sleep 5
-		Send, {%Skill2Key%}
-		Sleep 5
-	}
-	else
-	{
-		SetTimer, Press11, Off
-		ToolTip
-		11_Enable= false
-	}
-return
-
-;------------------------------------------------诗寇蒂自动战斗,Ctrl+小键盘2启动 ↓↓↓
-12_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Shikoudi:
-	{
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			12_Enable :=!12_Enable
-			if (12_Enable=false)
-			{
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				ToolTip, 诗寇蒂：启动, 74, 1021
-				gosub, Press12
-			}
-		}
-	}
-
-Press12:
-	loop
-	{
-		if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !12_Enable)
-		{
-			ToolTip
-			break  ; 退出循环
-		}
-		; 优先检测技能3
-		if (GetColor(1157, 683)=="0xFFFFFF" and GetColor(1173, 695)=="0xFFFFFF" and GetColor(770, 609)=="0xFFFFFF")
-		{
-		; 左线、右线神格, 化身槽满, 长按3
-      Send, {%Skill3Key% Down}
-      Sleep, 10000
-      Send, {%Skill3Key% Up}
-      Sleep, 10
-		}
-		else if (GetColor(1157, 683)=="0xFFFFFF" or GetColor(1166, 668)=="0xFFFFFF" or GetColor(1143, 677)=="0xFFFFFF")
-		{
-		; 化身槽不满, 图标有两种形态，一种是分割状态，一种是和中线一样, 所以同时检测两种图标有一种在就按3兼容三条神格
-      Send, {%Skill3Key%}
-      Sleep, 10
-		}
-		; 其次检测技能2
-		else if (GetColor(1097, 701)=="0xFFFFFF" and GetColor(1085, 700)=="0xFFFFFF")
-		{
-			Send, {%Skill2Key%}
-			Sleep, 10
-		}
-		else {
-			Send, {%AttackKey%}
-			Sleep, 10
-		}
-		Send, {%UltimateKey%}
-		Sleep, 10
-		Send, {%Teammate1Key%}
-		Sleep, 10
-		Send, {%Teammate2Key%}
-		Sleep, 10
-
-	}
-
-;------------------------------------------------樱切（左线）自动战斗,Ctrl+小键盘3启动 ↓↓↓
-13_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Fengqianfangtiangou:	
-  {
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			13_Enable :=!13_Enable
-			if (13_Enable=false)
-			{
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				ToolTip, 樱切（左线）：启动, 74, 1021
-				gosub, Press13
-			}
-		}
-	}
-
-Press13:
-	loop
-	{
-		if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !13_Enable)
-		{
-			ToolTip
-			break  ; 退出循环
-		}
-		; 检测1技能是否为樱弥状态，如果是，按3次1技能，然后按3次普攻,按3次2技能，然后按3次普攻,最后按3技能，退出樱弥状态
-		if (GetColor(1042, 682)=="0xFFFFFF")
-		{
-			Send, {%Skill1Key%}
-			Sleep, 500
-			Send, {%Skill1Key%}
-			Sleep, 500
-			Send, {%Skill1Key%}
-			Sleep, 500
-			Send, {%AttackKey%}
-			Sleep, 500
-			Send, {%AttackKey%}
-			Sleep, 500
-			Send, {%AttackKey%}	
-      Sleep, 500
-			Send, {%Skill2Key%}
-			Sleep, 500
-			Send, {%Skill2Key%}
-			Sleep, 500
-			Send, {%Skill2Key%}
-			Sleep, 500
-			Send, {%AttackKey%}
-			Sleep, 500
-			Send, {%AttackKey%}
-			Sleep, 500
-			Send, {%AttackKey%}	
-      Sleep, 500
-      Send, {%Skill3Key%}
-		}
-		; 检测是否在樱弥状态，如果不是，常规出招
-    if (GetColor(1042, 682)!="0xFFFFFF" and GetColor(1154, 699)!="0xFFFFFF")
-		{
-			Send, {%Skill1Key%}
-			Sleep, 10
-			Send, {%Skill2Key%}
-			Sleep, 10
-			Send, {%Skill3Key%}
-			Sleep, 10
-			Send, {%UltimateKey%}
-			Sleep, 10
-			Send, {%AttackKey%}
-			Sleep, 10
-			Send, {%Teammate1Key%}
-			Sleep, 10
-			Send, {%Teammate2Key%}
-			Sleep, 10
-			Send, {%AttackKey%}
-		}
-		
-	}
-;---------------------------------------------亚莉莎自动战斗,Ctrl+小键盘4启动 ↓↓↓
-14_Enable= false
-#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
-Yalisha:  
-  {
-		if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-		{
-			14_Enable :=!14_Enable
-			if (14_Enable=false)
-			{
-				ToolTip
-			}
-			else
-			{
-				Sleep 100
-				ToolTip, 亚莉莎（左线）：启动, 74, 1021
-				gosub, Press14
-			}
-		}
-	}
-
-Press14:
-  loop
-  {
-    if (!WinActive("ahk_exe AetherGazer.exe") and !WinActive("ahk_exe AetherGazer_Bili.exe") or !14_Enable)
-    {
-      ToolTip
-      break  ; 退出循环
-    }
-    ; 检测是否处于枪械模式，如果否，按前进+闪避长按进入枪械模式
-    if (GetColor(1145, 672)!="0xFFFFFF" )
-    {
-      Send, {%UpKey% Down}
-      Send, {%DodgeKey% Down}
-      Sleep, 500
-      Send, {%DodgeKey% Up}
-      Send, {%UpKey% Up}
-    }
-    ; 否则，开枪
-    else
-    {
-      Send, {%AttackKey%}
-      Sleep, 10
-      Send, {%UltimateKey%}
-			Sleep, 10
-			Send, {%AttackKey%}
-			Sleep, 10
-			Send, {%Teammate1Key%}
-			Sleep, 10
-			Send, {%Teammate2Key%}
-    }
-  }
-;------------------------------------------------强制停止脚本，小键盘0↓↓↓
-Stopscript:
-	Reload
-	1_Enable= False
-	2_Enable= False
-	3_Enable= False
-	4_Enable= False
-	5_Enable= False
-	6_Enable= False
-	7_Enable= False
-	9_Enable= False
-	11_Enable= False
-	12_Enable= False
-	13_Enable= False
-  14_Enable= False
-return
-;------------------------------------------------退出脚本↓↓↓
-ExitScript:
-    ExitApp
-return
-
-
-
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-;■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+; ============================================================================
+; FindText 图像识别功能
+; 用于多维变量自动刷分
+; ============================================================================
 FindText(ByRef x:="FindTextClass", ByRef y:="", args*)
 {
   static init, obj
