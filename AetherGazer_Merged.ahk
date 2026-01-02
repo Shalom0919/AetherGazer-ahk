@@ -1741,7 +1741,7 @@ return
 ; 第十七部分：FindText 图像识别功能
 ; 用于多维变量自动刷分，这是第三方库，保持其原有结构
 ; ============================================================================
-
+FindText(ByRef x:="FindTextClass", ByRef y:="", args*)
 {
   static init, obj
   if !VarSetCapacity(init) && (init:="1")
