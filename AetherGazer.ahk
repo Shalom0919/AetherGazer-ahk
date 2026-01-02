@@ -81,10 +81,12 @@ Hotkey, %StopscriptKey%, Stopscript
 ; 托盘菜单
 ; ============================================================================
 Menu, Tray, NoStandard
-Menu, Tray, Add, 打开设置, ShowSettingsGUI
-Menu, Tray, Add, 查看统计, ShowStatistics
+Menu, Tray, Add, 打开设置, ShowSettingsGUILabel
+Menu, Tray, Add, 查看统计, ShowStatisticsLabel
 Menu, Tray, Add
 Menu, Tray, Add, 退出程序, ExitScript
+Menu, Tray, Default, 打开设置
+Menu, Tray, Tip, 深空之眼自动脚本
 
 ; ============================================================================
 ; 游戏激活时有效的设置
@@ -118,6 +120,17 @@ return
 ; ============================================================================
 ExitScript:
 	ExitApp
+return
+
+; ============================================================================
+; 托盘菜单标签
+; ============================================================================
+ShowSettingsGUILabel:
+	ShowSettingsGUI()
+return
+
+ShowStatisticsLabel:
+	ShowStatistics()
 return
 
 ; ============================================================================
