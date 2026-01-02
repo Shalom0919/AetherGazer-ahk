@@ -1,44 +1,37 @@
 ﻿; ----------------------------------------------------------------------------
 ; 陵光自动战斗脚本
+; Lingguang Auto Combat Script
 ; ----------------------------------------------------------------------------
 
-global 3_Enable := false
-
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
 Lingguang:
 {
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	if IsGameActive()
 	{
 		3_Enable := !3_Enable
 		if (3_Enable = false)
 		{
 			SetTimer, Press3, Off
-			ToolTip
+			ClearStatus()
 		}
 		else
 		{
 			Sleep 100
 			SetTimer, Press3, 10
-			if (ShowTooltip)
-				ToolTip, 陵光：启动, %TooltipX%, %TooltipY%
+			ShowStatus("陵光：启动")
 		}
 	}
 }
 
 Press3:
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
-	{
-		Send, {%AttackKey%}
-		Sleep 250
-		Send, {%Skill1Key%}
-		Sleep 250
-		Send, {%UltimateKey%}
-		Send, {%Teammate1Key%}
-		Send, {%Teammate2Key%}
-	}
-	else
-	{
-		SetTimer, Press3, Off
-		ToolTip
-		3_Enable := false
-	}
+	if CheckAndStopCombat(3, "Press3")
+		return
+	
+	Send, {%AttackKey%}
+	Sleep 250
+	Send, {%Skill1Key%}
+	Sleep 250
+	Send, {%UltimateKey%}
+	Send, {%Teammate1Key%}
+	Send, {%Teammate2Key%}
 return

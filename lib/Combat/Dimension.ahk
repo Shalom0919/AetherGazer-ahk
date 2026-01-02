@@ -1,24 +1,24 @@
 ﻿; ----------------------------------------------------------------------------
 ; 多维变量自动刷分脚本
+; Dimension Auto-farming Script
 ; 注意：此模块依赖主脚本中的 FindText 功能
+; Note: This module depends on FindText functionality in the main script
 ; ----------------------------------------------------------------------------
 
-global 2_Enable := false
-
+#If WinActive("ahk_exe AetherGazer.exe") || WinActive("ahk_exe AetherGazer_Bili.exe")
 Dimension:
 {
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	if IsGameActive()
 	{
 		2_Enable := !2_Enable
 		if (2_Enable = false)
 		{
 			SetTimer, Press2, Off
-			ToolTip
+			ClearStatus()
 		}
 		else
 		{
-			if (ShowTooltip)
-				ToolTip, 多维变量：启动, %TooltipX%, %TooltipY%
+			ShowStatus("多维变量：启动")
 			Sleep 100
 			Press2()
 		}
@@ -27,17 +27,23 @@ Dimension:
 
 Press2()
 {
-	if WinActive("ahk_exe AetherGazer.exe") or WinActive("ahk_exe AetherGazer_Bili.exe")
+	if !IsGameActive()
 	{
-		CoordMode, Mouse, Window
-		SendMode Input
-		SetTitleMatchMode 2
-		SetControlDelay 1
-		SetWinDelay 0
-		SetKeyDelay -1
-		SetMouseDelay -1
-		loop
-		{
+		SetTimer, Press2, Off
+		ClearStatus()
+		2_Enable := false
+		return
+	}
+	
+	CoordMode, Mouse, Window
+	SendMode Input
+	SetTitleMatchMode 2
+	SetControlDelay 1
+	SetWinDelay 0
+	SetKeyDelay -1
+	SetMouseDelay -1
+	loop
+	{
 			;点击开始挑战
 			Text:="|<>*204$83.zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzjzzzzzwzz003sz7yD8znt7y007lwTwSFzbm7w00DXsbsYWT1aDz7lw1X7010y1CTyDXs36C121w20TwT7sYED647tk0TsyDl00SC8DnU3y003W00QCFzXVbs007AzzsMVw1XDk00CF03011s3YTyDXwW06221l71zwT7sA0D44HbC7zsyDsMwSC8zCQBzXwTkFswQFiQ0ly7szU3lslXAs0XsTly803l30M0EDlzXsO060D0k7kTrzDtwSCAy3zzlzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
 			ok:=FindText(X:="wait", Y:=-1, 0,0,0,0,0,0,Text)
@@ -211,12 +217,6 @@ Press2()
 			}
 			Sleep, 1000
 		}
-	}
-	else
-	{
-		SetTimer, Press2, Off
-		ToolTip
-		2_Enable := false
 	}
 }
 return
