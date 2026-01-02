@@ -39,15 +39,6 @@ if !A_IsAdmin
 #Include %A_ScriptDir%\lib\Config.ahk
 #Include %A_ScriptDir%\lib\Statistics.ahk
 #Include %A_ScriptDir%\lib\SettingsGUI.ahk
-#Include %A_ScriptDir%\lib\Combat\Jinwu.ahk
-#Include %A_ScriptDir%\lib\Combat\Lingguang.ahk
-#Include %A_ScriptDir%\lib\Combat\Tuote.ahk
-#Include %A_ScriptDir%\lib\Combat\Namei.ahk
-#Include %A_ScriptDir%\lib\Combat\Weier.ahk
-#Include %A_ScriptDir%\lib\Combat\Fantian.ahk
-#Include %A_ScriptDir%\lib\Combat\Shikoudi.ahk
-#Include %A_ScriptDir%\lib\Combat\Dimension.ahk
-#Include %A_ScriptDir%\lib\Combat\Others.ahk
 
 ; ============================================================================
 ; 初始化
@@ -148,6 +139,19 @@ ButtonOK:
 	UpdateHotkeys()
 return
 
+
+; ============================================================================
+; 加载战斗模块
+; ============================================================================
+#Include %A_ScriptDir%\lib\Combat\Jinwu.ahk
+#Include %A_ScriptDir%\lib\Combat\Lingguang.ahk
+#Include %A_ScriptDir%\lib\Combat\Tuote.ahk
+#Include %A_ScriptDir%\lib\Combat\Namei.ahk
+#Include %A_ScriptDir%\lib\Combat\Weier.ahk
+#Include %A_ScriptDir%\lib\Combat\Fantian.ahk
+#Include %A_ScriptDir%\lib\Combat\Shikoudi.ahk
+#Include %A_ScriptDir%\lib\Combat\Dimension.ahk
+#Include %A_ScriptDir%\lib\Combat\Others.ahk
 
 ; ============================================================================
 ; 加载 FindText 图像识别功能
