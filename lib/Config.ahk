@@ -1,4 +1,4 @@
-; ----------------------------------------------------------------------------
+﻿; ----------------------------------------------------------------------------
 ; 配置管理模块
 ; ----------------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ CreateDefaultConfig()
 	; 初始化统计数据
 	IniWrite, 0, %ConfigFilePath%, Statistics, TotalRuns
 	IniWrite, 0, %ConfigFilePath%, Statistics, TotalTime
-	IniWrite, , %ConfigFilePath%, Statistics, LastRunTime
+	IniWrite, N/A, %ConfigFilePath%, Statistics, LastRunTime
 }
 
 ; 保存配置
